@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8" />
+	<title>Cymatics — engine harness</title>
+	<style>
+		body { margin: 0; background: #0b0b0d; color: #ddd;
+			font: 13px/1.6 ui-monospace, SFMono-Regular, Menlo, monospace; }
+		#wrap { display: flex; gap: 16px; padding: 16px; align-items: flex-start; }
+		canvas { width: 512px; height: 512px; background: #000; border: 1px solid #333; display: block; }
+		#log { white-space: pre; min-width: 340px; }
+	</style>
+</head>
+<body>
+	<!--
+		Dev-only harness (not part of the production build). Drives the engine
+		with a synthetic spectrum so the render paths can be exercised without an
+		audio source or a user gesture.
+
+		  /engine-test.html?mode=emissive   default look, 2 passes
+		  /engine-test.html?mode=liquid     mercury surface, 3 passes
+		  /engine-test.html?mode=water      water surface, 3 passes
+		  /engine-test.html?mode=pbr        fluid + PBR, ~52 passes
+
+		See element-test.html for the <cymatics-view> element.
+	-->
+	<div id="wrap">
+		<canvas id="canvas" width="1024" height="1024"></canvas>
+		<div id="log">booting…</div>
+	</div>
+	<script type="module">
+		import { CymaticsEngine } from './src/engine-js/index.js'
+
+		window.__harness = { ok: false, errors: [] }
+		const log = document.getElementById('log')
+		const REQUESTED = new URLSearchParams(location.search).get('mode')
+		const MODE = ['pbr', 'liquid', 'water'].includes(REQUESTED) ? REQUESTED : 'emissive'
+		const IS_LIQUID = MODE === 'liquid' || MODE === 'water'
+		const BINS = 1024
+
+		try {
+			const engine = new CymaticsEngine(document.getElementById('canvas'))
+			window.__engine = engine
+
+			engine.command('set cymatics ' + JSON.stringify(
+				MODE === 'emissive' ? { contour_mode: 1, contour_count: 12 } : { contour_mode: 0 }))
+			engine.command('set renderer ' + JSON.stringify({
+				emissive_mode: MODE === 'emissive',
+				liquid_mode: IS_LIQUID,
+				liquid_material: MODE === 'water' ? 1 : 0,
+				// The engine defaults are tuned for the emissive path's purple
+				// glow. Mercury wants a near-neutral tint; water wants a blue-green
+				// body over a teal floor.
+				...(MODE === 'liquid'
+					? { color_outer: [0.95, 0.96, 1.0], color_inner: [0.05, 0.06, 0.09] }
+					: {}),
+				...(MODE === 'water'
+					? { color_outer: [0.35, 0.72, 0.78], color_inner: [0.06, 0.14, 0.17] }
+					: {}),
+				// Two lights, warm key and cool rim. The liquid path is sensitive to
+				// this: with a single near-overhead light most of the frame falls
+				// outside every specular lobe and the surface goes smooth and dull.
+				...(IS_LIQUID
+					? { lights: [
+						{ pos: [4.5, 6.2, 6.4], color: [1.0, 0.96, 0.88], roughness: 0.01 },
+						{ pos: [-6.6, -4.2, 6.2], color: [0.55, 0.72, 1.0], roughness: 0.01 },
+					] }
+					: {}),
+			}))
+
+			// Bass peak plus a mid bump, modulated so the envelope follower moves.
+			const spectrum = new Float32Array(BINS)
+			let t = 0
+			const feed = () => {
+				t += 1 / 60
+				for (let i = 0; i < BINS; i++) {
+					const f = i / BINS
+					spectrum[i] = Math.min(1,
+						Math.exp(-f * 60) * (0.6 + 0.4 * Math.sin(t * 3)) +
+						Math.exp(-Math.pow((f - 0.08) * 25, 2)) * 0.5)
+				}
+				engine.pushAudioSpectrum(spectrum, BINS, 44100)
+				requestAnimationFrame(feed)
+			}
+			feed()
+			engine.start()
+			window.__harness.ok = true
+
+			setInterval(() => {
+				const s = engine.stats
+				log.textContent = [
+					`mode      ${MODE}`,
+					`fps       ${s.fps.toFixed(1)}`,
+					`frame ms  ${s.frameMs.toFixed(2)}`,
+					`frames    ${s.frames}`,
+					``,
+					`float32 renderable  ${s.floatCaps.colorBufferFloat}`,
+					`float32 linear      ${s.floatCaps.floatLinear}`,
+					`fell back to fp16   ${s.floatCaps.usingHalfFloat}`,
+				].join('\n')
+			}, 250)
+		} catch (e) {
+			window.__harness.errors.push(String(e && e.stack || e))
+			log.textContent = 'FAILED\n\n' + (e && e.stack || e)
+			console.error(e)
+		}
+
+		window.addEventListener('error', e => window.__harness.errors.push(String(e.message)))
+	</script>
+</body>
+</html>

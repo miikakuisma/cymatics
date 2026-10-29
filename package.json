@@ -1,0 +1,48 @@
+{
+  "name": "cymatics",
+  "private": true,
+  "version": "1.0.6",
+  "description": "Real-time cymatics: music drives a WebGL2 wave simulation of a vibrating fluid surface.",
+  "license": "PolyForm-Noncommercial-1.0.0",
+  "author": "Miika Kuisma",
+  "contributors": [
+    "Tuomo Hirvonen (original glbase engine)"
+  ],
+  "homepage": "https://cymatics.app",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/miikakuisma/cymatics.git"
+  },
+  "bugs": {
+    "url": "https://github.com/miikakuisma/cymatics/issues"
+  },
+  "keywords": [
+    "cymatics",
+    "webgl2",
+    "audio-visualizer",
+    "web-audio",
+    "web-component",
+    "chladni",
+    "faraday-waves"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "type": "module",
+  "scripts": {
+    "dev": "vite --port 3000 --host",
+    "start": "vite --port 3000 --host",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "node --test test/*.test.js",
+    "build:element": "vite build --config vite.element.config.js",
+    "build:studio": "vite build --config vite.studio.config.js"
+  },
+  "dependencies": {
+    "web-audio-beat-detector": "^8.2.36"
+  },
+  "devDependencies": {
+    "sass": "^1.62.1",
+    "vite": "^5.1.6"
+  }
+}

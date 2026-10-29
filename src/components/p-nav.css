@@ -1,0 +1,72 @@
+p-nav {
+  position: fixed;
+  left: 0;
+  right: 0;
+  height: 64px;
+  z-index: 2;
+  background: #111;
+  bottom: env(safe-area-inset-bottom);
+}
+
+p-nav ul {
+  padding: 0;
+  margin: 0;
+  list-style: none;
+  display: flex;
+  justify-content: center;
+}
+
+p-nav ul li {
+
+}
+
+p-nav ul li button {
+  cursor: pointer;
+  border: none;
+  width: 48px;
+  height: 48px;
+  padding: 10px;
+  display: inline-flex;
+  position: relative;
+  transition: all 0.39s ease-in-out;
+  background: transparent;
+  color: var(--color2);
+  justify-content: center;
+  align-items: center;
+}
+
+p-nav ul li button.activated {
+  background: var(--color1);
+}
+
+p-nav ul li button svg {
+  fill: var(--color2);
+  pointer-events: none;
+}
+
+#app[mode="studio"] p-nav {
+  z-index: 2;
+  left: 50%;
+  transform: translateX(-50%);
+  right: unset;
+  bottom: env(safe-area-inset-bottom);
+  background: #111;
+  border-top-left-radius: 9px;
+  border-top-right-radius: 9px;
+  height: 48px;
+  position: fixed;
+  transition: opacity 1s ease-in-out;
+}
+
+#app[mode="studio"] p-nav ul li button.activated {
+  background: #222266;
+}
+
+@media (hover: hover) {
+
+  p-nav ul li button:hover {
+    background: var(--color1);
+    color: white;
+  }
+  
+}

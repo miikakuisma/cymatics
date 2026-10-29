@@ -1,0 +1,150 @@
+.presets {
+  z-index: 1;
+  left: 0;
+  right: 0;
+  bottom: calc(env(safe-area-inset-bottom) + 64px);
+  -webkit-backdrop-filter: blur(64px) brightness(.75);
+  backdrop-filter: blur(64px) brightness(.75);
+  scroll-snap-type: x mandatory;
+  background: #614c8c80;
+  width: 100vw;
+  padding: 10px 8px;
+  transition: transform .39s ease-in-out, padding .618s ease-in-out;
+  display: flex;
+  justify-content: center;
+  position: fixed;
+  overflow: scroll visible;
+  transform: translateY(200px);
+}
+
+#app[mode="studio"] .presets {
+  top: env(safe-area-inset-top);
+  left: 0;
+  right: unset;
+  bottom: 0;
+  z-index: 3;
+  background: #111;
+  flex-direction: column;
+  justify-content: flex-start;
+  width: 260px;
+  height: 100%;
+  padding-top: 55px;
+  overflow: hidden auto;
+  transform: translateX(-300px);
+  transform-origin: left top;
+}
+
+.presets ul {
+  padding: 0;
+  margin: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: row;
+  padding-left: 32px;
+}
+
+#app[mode="studio"] .presets ul {
+  padding: 0;
+  scroll-snap-type: y mandatory;
+  flex-direction: column;
+}
+
+.presets ul li {
+  position: relative;
+  cursor: pointer;
+  scroll-snap-align: center;
+  background: #111;
+  border-radius: 9px;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  width: 96px;
+  min-width: 96px;
+  height: 96px;
+  min-height: 96px;
+  margin: 0 5px;
+  padding: 0;
+  display: flex;
+  background-size: 60%;
+  background-repeat: no-repeat;
+  background-position: center;
+  transition: all .39s ease-in-out;
+}
+
+#app[mode="studio"] .presets ul li {
+  cursor: pointer;
+  scroll-snap-align: center;
+  background: #111 9px / 48px no-repeat;
+  border-radius: 3px;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  height: auto;
+  min-height: 66px;
+  margin: 0 5px;
+  padding: 15px 0;
+  display: flex;
+  overflow: hidden;
+  border-bottom: 1px solid var(--color4);
+}
+
+#app[mode="studio"] .presets ul li span {
+  padding-left: 20px;
+  color: #ccc;
+  font-size: 13px;
+  width: 100%;
+}
+
+.presets ul li:hover {
+  background-color: var(--color1) !important;
+}
+
+.presets ul li.activated {
+  background-color: #222266 !important;
+}
+
+#app[mode="studio"] .presets ul li:hover span {
+  color: white;
+}
+
+.presets ul li button[fn="delete"] {
+  position: absolute;
+  top: 22px;
+  right: 12px;
+  border-radius: 50%;
+  background: transparent;
+  width: 24px;
+  height: 24px;
+  border: none;
+  color: white;
+  cursor: pointer;
+}
+
+.presets ul li button[fn="delete"] svg {
+  fill: var(--color2);
+  pointer-events: none;
+  opacity: 0.3;
+}
+
+.presets ul li button[fn="delete"]:hover svg {
+  fill: red;
+  opacity: 1;
+}
+
+@media (max-width: 620px) {
+
+  #app[mode="studio"] .presets {
+    max-height: calc(100% - 60px);
+  }
+
+}
+cymatics-presets .preset-group { opacity: 0.55; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; pointer-events: none; padding-top: 10px; }
+#app[mode="studio"] .presets ul li.preset-group { min-height: 0; padding: 14px 0 6px 20px; background: none; border-bottom: none; color: #ccc; }
+cymatics-presets .preset-note { font-size: 12px; opacity: 0.8; min-height: 1.2em; margin: 8px 12px; color: #ccc; }
+#app[mode="studio"] .presets ul li.preset-action { min-height: 0; padding: 10px; background: none; border-bottom: none; }
+cymatics-presets .preset-action button { width: 100%; }
+.presets ul li button[fn="rename"] { position: absolute; top: 22px; right: 40px; width: 24px; height: 24px; border: none; background: transparent; color: #888; cursor: pointer; }
+.presets ul li button[fn="rename"]:hover { color: white; }
+.presets ul li button[fn="delete"] { color: #888; font-size: 18px; line-height: 1; }
+.presets ul li button[fn="delete"]:hover { color: #ff6b6b; }

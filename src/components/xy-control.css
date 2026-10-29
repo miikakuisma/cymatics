@@ -1,0 +1,144 @@
+xy-control {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+xy-control .grid {
+  position: relative;
+  cursor: pointer;
+  scroll-snap-align: center;
+  background: #111;
+  border-radius: 9px;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  width: 96px;
+  min-width: 96px;
+  height: 95px;
+  min-height: 96px;
+  margin: 0 5px;
+  padding: 0;
+  display: flex;
+  overflow: hidden;
+}
+
+xy-control .handle {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #ccc;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  margin-left: -8px;
+  margin-top: -8px;
+  cursor: pointer;
+  transform: translate(0px, 0px);
+  transform-origin: center;
+}
+
+xy-control .handle.selected {
+  border: 2px solid white;
+  background: #222;
+}
+
+xy-control .buttons {
+  display: none;
+  position: absolute;
+  bottom: 3px;
+  left: 8px;
+  right: 8px;
+  justify-content: space-between;
+}
+
+xy-control .buttons.visible {
+  display: flex;
+}
+
+xy-control .buttons button {
+  border-radius: 6px;
+  cursor: pointer;
+  background: transparent;
+  border: none;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  margin: 0;
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+}
+
+xy-control .buttons button svg {
+  width: 100%;
+  height: 100%;
+  color: var(--color2);
+}
+
+xy-control input[type="color"] {
+  border-radius: 6px;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+}
+
+xy-control input[type="color"]::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+
+xy-control input[type="color"]::-webkit-color-swatch {
+  border: none;
+  border-radius: 6px;
+}
+
+
+#app[mode="studio"] xy-control {
+  width: 100%;
+  background: #111;
+}
+
+#app[mode="studio"] xy-control .grid {
+  border: 2px solid #226;
+  margin: auto;
+  z-index: 3;
+}
+
+#app[mode="studio"] xy-control .label {
+  color: var(--color2);
+  font-size: 13px;
+  width: 100px;
+  margin: 5px auto;
+  text-align: center;
+}
+
+#app[mode="studio"] xy-control .buttons {
+  flex-direction: column;
+  justify-content: space-evenly;
+  align-items: center;
+  width: 25px;
+  height: 96px;
+  display: none;
+  position: absolute;
+  top: 0;
+}
+
+#app[mode="studio"] xy-control .buttons.left {
+  left: 30px;
+}
+
+#app[mode="studio"] xy-control .buttons.right {
+  right: 30px;
+  left: unset;
+  display: flex;
+}
+
+#app[mode="studio"] xy-control .buttons.visible {
+  display: flex;
+}
+
+#app[mode="studio"] xy-control .buttons button {
+  font-size: 32px;
+  color: white;
+}
+
