@@ -168,7 +168,7 @@ license it to others under commercial terms.
 
 ## Credits
 
-The rendering engine is a JavaScript port of **glbase**, the C++ engine written
+The rendering engine is a JavaScript port of C++ engine written
 by **Tuomo Hirvonen**, which first powered Cymatics as WebAssembly.
 
 The knob control is adapted from [precision-inputs](https://github.com/jhnsnc/precision-inputs)
@@ -185,7 +185,7 @@ research, teaching, and use by charities, schools and public institutions.
 **Commercial use needs a separate license.** That includes using Cymatics or
 `<cymatics-view>` in a product, a paid service, a client project, a commercial
 venue or a brand's website. To ask about a commercial license, contact
-[Miika Kuisma](https://github.com/miikakuisma).
+[Miika Kuisma](https://miikakuisma.com).
 
 Copyright 2026 Miika Kuisma; engine portions copyright 2021-2022 Tuomo
 Hirvonen. See [NOTICE](NOTICE) for third-party attributions.
