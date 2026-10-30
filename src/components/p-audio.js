@@ -1073,9 +1073,12 @@ export class PuhdeAudio extends HTMLElement {
   // window.eq<frequency>, whichever source is playing; a gain already set
   // carries over, so switching source keeps the EQ.
   createEqFilters(ctx) {
-    equalizerDefaults.forEach((eq) => {
+    // The first filters start from the panel: the EQ can be set before any
+    // audio has played.
+    const panel = s('p-equalizer')?.gains ?? []
+    equalizerDefaults.forEach((eq, i) => {
       const key = `eq${eq.frequency}`
-      const gain = window[key]?.gain?.value ?? 0
+      const gain = window[key]?.gain?.value ?? panel[i] ?? 0
       window[key] = ctx.createBiquadFilter()
       window[key].type = eq.type
       window[key].frequency.value = eq.frequency

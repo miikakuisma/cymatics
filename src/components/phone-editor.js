@@ -71,17 +71,22 @@ export function toolButton({ id, label, icon }, selected, onPick) {
 	return b
 }
 
-// Name, then the Auto pill if it has one, then the value as a plain number.
+// Name, then the Auto pill if it has one, then the value as a plain number,
+// or "Auto" while the music is moving it.
 export function sliderHead(label, autoLabel, slider, { step, name }) {
 	const head = el('div', 'tool-head')
 	const value = el('span', 'tool-value')
+	const auto = autoLabel?.querySelector('input')
 	// Sliders carry their value x100, except light_distance (see createSlider).
 	const scale = name === 'light_distance' ? 1 : 100
 	const decimals = Math.max(0, -Math.floor(Math.log10(step) + 1e-9))
 	const paint = () => {
-		value.textContent = (parseFloat(slider.value) / scale).toFixed(decimals)
+		value.textContent = auto?.checked
+			? 'Auto'
+			: (parseFloat(slider.value) / scale).toFixed(decimals)
 	}
 	slider.addEventListener('input', paint)
+	auto?.addEventListener('change', paint)
 	paint()
 	head.append(label)
 	if (autoLabel) head.append(autoLabel)

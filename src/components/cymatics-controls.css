@@ -591,7 +591,8 @@ details[open] summary:after {
     display: none;
   }
 
-  #app[mode="studio"] .controls.editor .tool-icon {
+  /* Under .tool-row, to outrank the button reset above. */
+  #app[mode="studio"] .controls.editor .tool-row .tool-icon {
     display: flex;
     flex: none;
     flex-direction: column;
@@ -629,7 +630,7 @@ details[open] summary:after {
     -webkit-line-clamp: 2;
   }
 
-  #app[mode="studio"] .controls.editor .tool-icon.selected {
+  #app[mode="studio"] .controls.editor .tool-row .tool-icon.selected {
     color: #fff;
   }
 
@@ -638,9 +639,11 @@ details[open] summary:after {
     color: var(--editor-accent);
   }
 
-  /* The five tabs. */
+  /* The five tabs: they fit the 300px landscape column and a 360px screen
+     with room between them; anything narrower scrolls, keeping the gaps. */
   #app[mode="studio"] .controls.editor .tab-row {
     display: flex;
+    gap: 6px;
     justify-content: space-between;
     padding: 0 8px;
     overflow-x: auto;
@@ -648,18 +651,20 @@ details[open] summary:after {
     scrollbar-width: none;
   }
 
-  #app[mode="studio"] .controls.editor .editor-tab {
-    flex: 1 0 auto;
+  /* Under .tab-row, to outrank the button reset above. */
+  #app[mode="studio"] .controls.editor .tab-row .editor-tab {
+    flex: none;
     min-width: 44px;
     height: 44px;
-    padding: 0 8px;
-    font-size: 11px;
-    letter-spacing: .08em;
+    padding: 0 4px;
+    font-size: 10px;
+    letter-spacing: .03em;
+    white-space: nowrap;
     text-transform: uppercase;
     color: #888;
   }
 
-  #app[mode="studio"] .controls.editor .editor-tab.selected {
+  #app[mode="studio"] .controls.editor .tab-row .editor-tab.selected {
     color: #fff;
     text-decoration-line: underline;
     text-decoration-color: var(--editor-accent);
