@@ -22,7 +22,8 @@
 		  /engine-test.html?mode=water      water surface, 3 passes
 		  /engine-test.html?mode=pbr        fluid + PBR, ~52 passes
 
-		  &field=square|round   plate modes instead of radiating sources, driven
+		  &field=square|round|triangle|pentagon|hexagon
+		                        plate modes instead of radiating sources, driven
 		                        by a tone that sweeps up through the spectrum
 
 		See element-test.html for the <cymatics-view> element.
@@ -40,7 +41,8 @@
 		const MODE = ['pbr', 'liquid', 'water'].includes(REQUESTED) ? REQUESTED : 'emissive'
 		const IS_LIQUID = MODE === 'liquid' || MODE === 'water'
 		const BINS = 1024
-		const FIELD = { square: 1, round: 2 }[new URLSearchParams(location.search).get('field')] || 0
+		const FIELD_NAMES = ['', 'square', 'round', 'triangle', 'pentagon', 'hexagon']
+		const FIELD = Math.max(0, FIELD_NAMES.indexOf(new URLSearchParams(location.search).get('field')))
 		// &distance=0.5: view_scale, which on a plate is its size (finer figures).
 		const DISTANCE = Number(new URLSearchParams(location.search).get('distance')) || null
 
@@ -110,7 +112,8 @@
 				const s = engine.stats
 				log.textContent = [
 					`mode      ${MODE}`,
-					...(FIELD ? [`field     ${FIELD === 1 ? 'square' : 'round'} plate`,
+					// The engine's own field, so one switched from the console is named.
+					...(FIELD ? [`field     ${engine.view.cymatics.fieldMode ? FIELD_NAMES[engine.view.cymatics.fieldMode] + ' plate' : 'sources'}`,
 						`tone      ${window.__harness.hz.toFixed(0)} Hz`,
 						`modes     ${[...Array(engine.view.cymatics.modeCount).keys()].map((j) => {
 							const c = engine.view.cymatics

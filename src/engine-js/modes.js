@@ -238,11 +238,11 @@ function rawTable() {
 
 // The divisor each row is scaled by: its largest |J_n| over the table. J₀
 // peaks at 1 but J₈ only near 0.3, and an unscaled table would let low-n modes
-// drown the rest.
+// drown the rest. `raw`, if given, is a rawTable() already in hand.
 let peaks = null
-export function besselRowPeaks() {
+export function besselRowPeaks(raw = null) {
 	if (!peaks) {
-		const data = rawTable()
+		const data = raw || rawTable()
 		peaks = new Float64Array(BESSEL_ROWS)
 		for (let n = 0; n < BESSEL_ROWS; n++) {
 			let peak = 0
@@ -256,7 +256,7 @@ export function besselRowPeaks() {
 // J_n sampled over [0, BESSEL_X_MAX], each row scaled so its peak is 1.
 export function besselTable() {
 	const data = rawTable()
-	const p = besselRowPeaks()
+	const p = besselRowPeaks(data) // before the rows are scaled in place
 	for (let n = 0; n < BESSEL_ROWS; n++) {
 		const row = n * BESSEL_WIDTH
 		for (let i = 0; i < BESSEL_WIDTH; i++) data[row + i] /= p[n]

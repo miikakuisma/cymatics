@@ -26,9 +26,10 @@ uniform float uTime;
 uniform float contourMode;
 uniform float contourCount;
 
-// Plate modes (field_mode 1 square, 2 round). See modes.js.
+// Plate modes (field_mode 1 square, 2 round, 3–5 triangle, pentagon,
+// hexagon). See modes.js and plate-modes.js.
 // modeParams[i] = (a, b, omega, mix): square a = m, b = n, mix = ±1 or 0;
-// round a = n, b = alpha.
+// round a = n, b = alpha; polygon a = stored mode, b = k, mix 0 or 1.
 // modeAmp arrives already thresholded and sharpened by pickModes().
 const int MAX_MODES = 4;
 uniform int fieldMode;
@@ -38,6 +39,14 @@ uniform float modeAmp[MAX_MODES];
 // J_n(x) over [0, besselXMax], one row per n, each row scaled to peak 1.
 uniform highp sampler2D besselTable;
 uniform float besselXMax;
+// Polygons: each picked mode's figure, baked across plateUv −1..1
+// (plate-bake.js). Always bound, to a placeholder when unused.
+uniform highp sampler2D plateMode0;
+uniform highp sampler2D plateMode1;
+uniform highp sampler2D plateMode2;
+uniform highp sampler2D plateMode3;
+uniform int polySides;
+uniform float polyOffset;
 
 const float PI = 3.14159265358979;
 
@@ -51,6 +60,27 @@ float besselJ(int n, float x)
                texelFetch(besselTable, ivec2(j, n), 0).r, u - float(i));
 }
 
+// Explicit LOD: the polygon's outline test returns early, so these are not
+// in uniform control flow, and the figures have no mipmaps anyway.
+float plateMode(int i, vec2 xy)
+{
+    if (i == 0) return textureLod(plateMode0, xy, 0.0).r;
+    if (i == 1) return textureLod(plateMode1, xy, 0.0).r;
+    if (i == 2) return textureLod(plateMode2, xy, 0.0).r;
+    return textureLod(plateMode3, xy, 0.0).r;
+}
+
+// insidePolygon (polygons.js): θ′ = atan(x, y) reduced to the nearest edge's
+// sector, then the distance along its normal against the apothem.
+bool outsidePolygon(vec2 p)
+{
+    float n = float(polySides);
+    float w = 2.0 * PI / n;
+    float phi = atan(p.x, p.y) - polyOffset - PI / n;
+    phi -= w * floor((phi + PI / n) / w);
+    return length(p) * cos(phi) > cos(PI / n) + 1e-6;
+}
+
 // A standing wave: the shape is fixed and only breathes. Its nodal lines never
 // move, which is what makes a Chladni figure, and it never flattens to nothing
 // the way a full cos(wt) would, which on screen reads as a blink.
@@ -59,7 +89,7 @@ float plateField(out bool outside)
     outside = false;
     float wave = 0.0;
     float r = length(plateUv);
-    if (fieldMode == 2 && r > 1.0) {
+    if ((fieldMode == 2 && r > 1.0) || (fieldMode >= 3 && outsidePolygon(plateUv))) {
         outside = true;
         return 0.0;
     }
@@ -75,9 +105,11 @@ float plateField(out bool outside)
             float b = cos(m.x * PI * xy.x) * cos(m.y * PI * xy.y);
             // mix is 0 when m == n: not degenerate, nothing to superpose.
             shape = (a + m.w * b) / (1.0 + abs(m.w));
-        } else {
+        } else if (fieldMode == 2) {
             int n = int(m.x + 0.5);
             shape = besselJ(n, m.y * r) * cos(float(n) * theta);
+        } else {
+            shape = plateMode(i, xy);
         }
         wave += modeAmp[i] * shape * (0.75 + 0.25 * cos(m.z * uTime));
     }
@@ -161,7 +193,7 @@ void main()
             effectiveAmp += a;
         }
     }
-    // Off the round plate there is nothing to draw, contour line or otherwise.
+    // Off the round or polygon plate there is nothing to draw, contour line or otherwise.
     if (effectiveAmp < 0.001 || outside) wave = 0.0;
 
     // Map to [0, 1]

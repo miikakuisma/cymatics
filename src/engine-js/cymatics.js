@@ -10,11 +10,16 @@
 // envelope follower plus the uniform setup — the entire per-frame CPU cost.
 
 import { Fbo, Program, attrToValue, createColorTexture, FLOAT32 } from './glutil.js'
-import { shader } from './shaders.js'
+import { FULLSCREEN_VSH, shader } from './shaders.js'
 import {
-	BESSEL_ROWS, BESSEL_WIDTH, BESSEL_X_MAX, FIELD_ROUND, FIELD_SOURCES, MAX_ACTIVE_MODES,
+	BESSEL_ROWS, BESSEL_WIDTH, BESSEL_X_MAX, FIELD_ROUND, FIELD_SOURCES, MAX_ACTIVE_MODES, POLYGON_SIDES,
 	besselTable, clampFieldMode, modeBinRanges, pickModes, plateFundamentalHz, roundModes, squareModes,
 } from './modes.js'
+import { PlateBaker } from './plate-bake.js'
+import { polygonModes } from './plate-modes.js'
+import { polygon } from './polygons.js'
+
+const PLATE_MODE_SAMPLERS = ['plateMode0', 'plateMode1', 'plateMode2', 'plateMode3']
 
 const BAND_MIN_HZ = [20, 80, 250, 2000]
 const BAND_MAX_HZ = [80, 250, 2000, 20000]
@@ -114,14 +119,22 @@ export class Cymatics {
 		// Plate modes, off by default: 0 keeps the radiating sources every
 		// preset was tuned on. See modes.js.
 		this.fieldMode = FIELD_SOURCES
-		this.plates = {} // field mode -> { modes, env, ranges, rangesKey }
+		this.plates = {} // field mode -> { modes, env, ranges, rangesKey, offset }
 		this.modePick = new Float32Array(MAX_ACTIVE_MODES * 2)
 		this.modeParams = new Float32Array(MAX_ACTIVE_MODES * 4)
 		this.modeAmp = new Float32Array(MAX_ACTIVE_MODES)
 		this.modeAmpScaled = new Float32Array(MAX_ACTIVE_MODES)
 		this.modeCount = 0
+		// The listing index of each picked mode, and the field it was picked
+		// on: a field switched between pick and render must not index the new
+		// field's listing with the old one's picks.
+		this.modeIndex = new Int32Array(MAX_ACTIVE_MODES)
+		this.modeField = FIELD_SOURCES
 		this.besselTex = null
 		this.placeholderTex = null
+		// Polygons: baked figures (plate-bake.js), made on first use.
+		this.baker = null
+		this.plateTex = new Array(MAX_ACTIVE_MODES).fill(null)
 
 		this.bandAmp = new Float32Array(4)
 		this.bandK = new Float32Array(4)
@@ -206,8 +219,12 @@ export class Cymatics {
 	plate(fieldMode) {
 		let plate = this.plates[fieldMode]
 		if (!plate) {
-			const modes = fieldMode === FIELD_ROUND ? roundModes() : squareModes()
-			plate = { modes, env: new Float32Array(modes.length), ranges: null, rangesKey: '' }
+			const sides = POLYGON_SIDES[fieldMode]
+			const modes = sides ? polygonModes(sides) : fieldMode === FIELD_ROUND ? roundModes() : squareModes()
+			plate = {
+				modes, env: new Float32Array(modes.length), ranges: null, rangesKey: '',
+				offset: sides ? polygon(sides).offset : 0, // the outline's turn, for the shader
+			}
 			this.plates[fieldMode] = plate
 		}
 		return plate
@@ -243,9 +260,11 @@ export class Cymatics {
 			this.modeParams[j * 4 + 2] = 1.5 + 0.4 * Math.sqrt(mode.ratio)
 			this.modeParams[j * 4 + 3] = mode.mix
 			this.modeAmp[j] = this.modePick[j * 2 + 1]
+			this.modeIndex[j] = this.modePick[j * 2]
 		}
 		for (let j = count; j < MAX_ACTIVE_MODES; j++) this.modeAmp[j] = 0
 		this.modeCount = count
+		this.modeField = this.fieldMode
 	}
 
 	ensureBesselTexture() {
@@ -287,6 +306,24 @@ export class Cymatics {
 		gl.disable(gl.CULL_FACE)
 		gl.disable(gl.BLEND)
 
+		// Picks made on another field mean nothing on this one.
+		const modeCount = this.modeField === this.fieldMode ? this.modeCount : 0
+		// A polygon's figures are baked here, before the field pass binds its
+		// own target: a bake is a render pass of its own.
+		const sides = POLYGON_SIDES[this.fieldMode]
+		if (sides) {
+			if (!this.baker) {
+				this.baker = new PlateBaker(this.ctx, {
+					bessel: this.ensureBesselTexture(),
+					vertexSource: FULLSCREEN_VSH,
+					fragmentSource: shader('plate_bake.fsh'),
+				})
+			}
+			for (let j = 0; j < MAX_ACTIVE_MODES; j++) {
+				this.plateTex[j] = j < modeCount ? this.baker.texture(sides, this.modeIndex[j]) : null
+			}
+		}
+
 		this.fbo.bind()
 		const p = this.program.use()
 		gl.clearColor(0.5, 0.5, 0.5, 1.0)
@@ -315,17 +352,20 @@ export class Cymatics {
 		p.float('contourCount', this.contourCount)
 
 		p.int('fieldMode', this.fieldMode)
-		// The sampler must always point at something. Left alone it reads unit
-		// 0, which can hold this pass's own render target, and WebGL refuses
-		// that draw as a feedback loop (INVALID_OPERATION, blank field).
-		if (this.fieldMode === FIELD_ROUND) {
-			p.bindTexture('besselTable', this.ensureBesselTexture())
-		} else {
-			if (!this.placeholderTex) this.placeholderTex = createColorTexture(this.ctx, 0, 0, 0)
-			p.bindTexture('besselTable', this.placeholderTex)
+		// Every sampler must always point at something. Left alone one reads
+		// unit 0, which can hold this pass's own render target, and WebGL
+		// refuses that draw as a feedback loop (INVALID_OPERATION, blank field).
+		if (!this.placeholderTex) this.placeholderTex = createColorTexture(this.ctx, 0, 0, 0)
+		p.bindTexture('besselTable', this.fieldMode === FIELD_ROUND ? this.ensureBesselTexture() : this.placeholderTex)
+		for (let j = 0; j < MAX_ACTIVE_MODES; j++) {
+			p.bindTexture(PLATE_MODE_SAMPLERS[j], (sides && this.plateTex[j]) || this.placeholderTex)
+		}
+		if (sides) {
+			p.int('polySides', sides)
+			p.float('polyOffset', this.plate(this.fieldMode).offset)
 		}
 		if (this.fieldMode !== FIELD_SOURCES) {
-			p.int('modeCount', this.modeCount)
+			p.int('modeCount', modeCount)
 			// Gain applies to the picked weights, as it does to the bands.
 			for (let j = 0; j < MAX_ACTIVE_MODES; j++) this.modeAmpScaled[j] = this.modeAmp[j] * this.audioAmplifyMul
 			p.floatv('modeAmp[0]', this.modeAmpScaled)
@@ -396,5 +436,6 @@ export class Cymatics {
 		if (this.fbo) this.fbo.dispose()
 		if (this.besselTex) this.ctx.gl.deleteTexture(this.besselTex)
 		if (this.placeholderTex) this.ctx.gl.deleteTexture(this.placeholderTex)
+		if (this.baker) this.baker.dispose()
 	}
 }
