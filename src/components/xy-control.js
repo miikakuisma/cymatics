@@ -38,6 +38,9 @@ class Xycontrol extends HTMLElement {
 
 	async render() {
 		let handles = ''
+		// The selection can outlive its light: a removed light, or a preset with
+		// fewer lights than the last one.
+		if (this.selectedHandle >= this.handles.length) this.selectedHandle = 0
 		if (this.handles.length > 0) {
 			this.handles.filter(h => h.controls === this.controls).map((handle, index) => {
 
@@ -51,6 +54,10 @@ class Xycontrol extends HTMLElement {
 					style="transform: translate(${xPos}px, ${yPos}px); background-color: ${handle.color}"
 				></div>`
 			})
+		} else if (this.controls === 'lights') {
+			// No lights is a real state (a preset can have none): say so rather
+			// than draw a handle with nothing behind it.
+			handles = '<div class="empty">No lights. Press + to add one.</div>'
 		} else {
 			handles = '<div class="handle"></div>'
 		}
@@ -181,7 +188,11 @@ class Xycontrol extends HTMLElement {
 				const selected = this.querySelector('.handle.selected')
 				if (!selected) return
 				this.dispatchEvent(new CustomEvent("change", { detail: { remove: true, handleIndex: this.selectedHandle }} ))
-				selected.remove()
+				// Redraw rather than drop the one element: every handle after it
+				// shifts down an index, and stale handle-index attributes would
+				// steer the wrong light.
+				this.selectedHandle = 0
+				this.render()
 			})
 		}
 	}

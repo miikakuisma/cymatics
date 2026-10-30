@@ -25,6 +25,14 @@ function selectedLight() {
   return engine.state.rendererConfig.lights?.[handle] || null
 }
 
+// The Light Color picker has nothing to colour while there are no lights.
+function syncLightColorPicker() {
+  const picker = s('input.light-color-picker')
+  if (!picker) return
+  picker.disabled = !engine.state.rendererConfig.lights?.length
+  picker.title = picker.disabled ? 'No lights. Add one on the pad above.' : ''
+}
+
 function editSelectedLight(change) {
   const handle = s('xy-control[controls="lights"]')?.selectedHandle ?? 0
   const lights = structuredClone(engine.state.rendererConfig.lights || [])
@@ -247,6 +255,7 @@ export class PuhdeCymaticsControls extends HTMLElement {
     const formation = matchFormation(engine.state.cymaticsConfig.poles)
     if (formation) s('pole-config').setAttribute('selected', formation)
     this.applyFieldMode()
+    syncLightColorPicker()
     // const convertColorToHex = (color) => {
 		// 	const hex = color.map(c => Math.round(c * 255).toString(16).padStart(2, '0')).join('')
 		// 	return `#${hex}`
@@ -303,12 +312,14 @@ export class PuhdeCymaticsControls extends HTMLElement {
             const b = parseInt(e.detail.color.substring(5, 7), 16) / 255
             let newLights = JSON.parse(JSON.stringify(engine.state.rendererConfig.lights))
             const handleIndex = parseInt(e.detail.handleIndex)
+            if (!newLights[handleIndex]) return
             newLights[handleIndex].color = [r, g, b]
             update('lights', newLights)
           } else if (e.detail && e.detail.reset) {
             // reset light
             let newLights = JSON.parse(JSON.stringify(engine.state.rendererConfig.lights))
             const handleIndex = parseInt(e.detail.handleIndex)
+            if (!newLights[handleIndex]) return
             newLights[handleIndex].pos = [0, 0, -10]
             update('lights', newLights)
             s('xy-control[controls="lights"]').reset()
@@ -328,13 +339,16 @@ export class PuhdeCymaticsControls extends HTMLElement {
             update('lights', newLights)
             s('xy-control[controls="lights"]').handles.push(newHandle)
             s('xy-control[controls="lights"]').render()
+            syncLightColorPicker()
           } else if (e.detail && e.detail.remove) {
             // remove light
             let newLights = JSON.parse(JSON.stringify(engine.state.rendererConfig.lights))
             const handleIndex = parseInt(e.detail.handleIndex)
+            if (!newLights[handleIndex]) return
             newLights.splice(handleIndex, 1)
             update('lights', newLights)
             s('xy-control[controls="lights"]').handles.splice(handleIndex, 1)
+            syncLightColorPicker()
           } else {
             // listen to x/y control change
             if (!e.target.values) return
@@ -343,6 +357,7 @@ export class PuhdeCymaticsControls extends HTMLElement {
             const x = e.target.values.x * 6
             const y = e.target.values.y * 6
             const z = parseFloat(s('input[name="light_distance"]').value)
+            if (!newLights[handleIndex]) return
             newLights[handleIndex].pos = [x, y, z]
             update('lights', newLights)
           }
@@ -389,6 +404,8 @@ export class PuhdeCymaticsControls extends HTMLElement {
         if (engine.state.rendererConfig.lights?.[0]) {
           colorPicker.value = convertColorToHex(engine.state.rendererConfig.lights[0].color)
         }
+        colorPicker.disabled = !engine.state.rendererConfig.lights?.length
+        colorPicker.title = colorPicker.disabled ? 'No lights. Add one on the pad above.' : ''
         const dynamicColorLabel = document.createElement('label')
         dynamicColorLabel.classList.add('auto-toggle')
         const dynamicColorCheck = document.createElement('input')
@@ -444,6 +461,7 @@ export class PuhdeCymaticsControls extends HTMLElement {
           const xyControl = s('xy-control[controls="lights"]')
           const handleIndex = xyControl ? xyControl.selectedHandle : 0
           let newLights = JSON.parse(JSON.stringify(engine.state.rendererConfig.lights))
+          if (!newLights[handleIndex]) return
           newLights[handleIndex].color = [r, g, b]
           const handle = s(`xy-control[controls="lights"] .handle[handle-index="${handleIndex}"]`)
           if (handle) handle.style.backgroundColor = e.target.value

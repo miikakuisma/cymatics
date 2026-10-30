@@ -38,6 +38,15 @@ xy-control .handle {
   transform-origin: center;
 }
 
+xy-control .empty {
+  padding: 0 10px;
+  color: #666;
+  font-size: 10px;
+  line-height: 1.3;
+  text-align: center;
+  cursor: default;
+}
+
 xy-control .handle.selected {
   border: 2px solid white;
   background: #222;
