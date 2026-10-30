@@ -30,7 +30,8 @@ export function polygon(sides) {
 
 // Reduce θ′ − offset − π/N into [−π/N, π/N), then test against the apothem.
 export function insidePolygon(sides, x, y) {
-	const { offset, apothem } = polygon(sides)
+	// polygon()'s offset and apothem, without building its vertex list on every call.
+	const offset = sides === 6 ? Math.PI / 6 : 0, apothem = Math.cos(Math.PI / sides)
 	const w = 2 * Math.PI / sides
 	let phi = thetaPrime(x, y) - offset - Math.PI / sides
 	phi -= w * Math.floor((phi + Math.PI / sides) / w)
@@ -58,3 +59,41 @@ export function classOrders(sides, j, parity, nMax) {
 
 // +1 if n ≡ j (mod N), else −1.
 export const partnerSign = (sides, j, n) => (n % sides === j ? 1 : -1)
+
+/** The fundamental triangle: origin, vertex 0, and the midpoint of edge 0. */
+export function fundamentalTriangle(sides) {
+	const { vertices } = polygon(sides)
+	const [b, c] = [vertices[0], vertices[1]]
+	return [[0, 0], b, [(b[0] + c[0]) / 2, (b[1] + c[1]) / 2]]
+}
+
+// Corners. Near a vertex of interior angle α = π(N − 2)/N an eigenfunction is
+// Σ cₘ·J_νm(k r′)·cos(νm φ′), ν = π/α = N/(N − 2), (r′, φ′) polar about the
+// vertex. Where νm is not an integer that is singular at the vertex, and a
+// series about the centre converges only slowly there: the pentagon (ν = 5/3)
+// and hexagon (ν = 3/2) need those terms explicitly; the triangle (ν = 3) and
+// square (ν = 2) have none.
+export const CORNER_MAX_ORDER = 8
+
+/** The non-integer corner orders μ = νm ≤ maxOrder, ν = N/(N − 2). */
+export function cornerOrders(sides, maxOrder = CORNER_MAX_ORDER) {
+	const nu = sides / (sides - 2)
+	const out = []
+	for (let m = 1; nu * m <= maxOrder + 1e-9; m++) {
+		const mu = nu * m
+		if (Math.abs(mu - Math.round(mu)) > 1e-9) out.push(mu)
+	}
+	return out
+}
+
+// Vertex 0's local frame: b̂ the inward bisector, ŵ across it towards the last
+// vertex; φ′ runs from 0 on edge 0 to α on edge N − 1, and the branch cut lies
+// outside the polygon, along −b̂.
+export function cornerFrame(sides) {
+	const { vertices } = polygon(sides)
+	const V = vertices[0], last = vertices[sides - 1]
+	const bx = -V[0], by = -V[1]
+	let wx = -by, wy = bx
+	if ((last[0] - V[0]) * wx + (last[1] - V[1]) * wy < 0) { wx = -wx; wy = -wy }
+	return { vx: V[0], vy: V[1], bx, by, wx, wy, halfAngle: Math.PI * (sides - 2) / sides / 2 }
+}

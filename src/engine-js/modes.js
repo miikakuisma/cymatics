@@ -119,7 +119,7 @@ export function besselZeros(n, count) {
 // frequency relative to the plate's lowest mode.
 // Square: a = m, b = n (m ≤ n), mix = ±1 (0 when m = n: nothing to pair).
 // Round: a = n, b = α, mix unused.
-const SPLIT = Math.pow(2, 1 / 36)
+export const SPLIT = Math.pow(2, 1 / 36)
 
 export function squareModes(maxOrder = SQUARE_MAX_ORDER) {
 	const modes = []
@@ -175,6 +175,50 @@ export function besselAllOrders(x, nMax, out) {
 	}
 	sum += j[0]
 	for (let n = 0; n <= nMax; n++) out[n] = j[n] / sum
+	return out
+}
+
+// Γ(z) for z ≥ 1 (Lanczos, g = 7): relative error ~1e-15.
+const LANCZOS = [0.99999999999980993, 676.5203681218851, -1259.1392167224028, 771.32342877765313,
+	-176.61502916214059, 12.507343278686905, -0.13857109526572012, 9.9843695780195716e-6, 1.5056327351493116e-7]
+function gammaAtLeast1(z) {
+	z -= 1
+	let a = LANCZOS[0]
+	for (let i = 1; i < 9; i++) a += LANCZOS[i] / (z + i)
+	const t = z + 7.5
+	return Math.sqrt(2 * Math.PI) * Math.pow(t, z + 0.5) * Math.exp(-t) * a
+}
+
+const gammas = new Map()
+const gammaOf = (mu0) => {
+	if (!gammas.has(mu0)) gammas.set(mu0, gammaAtLeast1(mu0 + 1) / mu0)
+	return gammas.get(mu0)
+}
+
+/**
+ * J_{μ₀+n}(x) for n = 0..nMax into `out`, 0 < μ₀ < 1 — the fractional orders
+ * of a polygon plate's corner terms (plate-modes.js): Miller's backward
+ * recurrence, normalised by (x/2)^μ₀ = Σₖ (μ₀ + 2k)·Γ(μ₀ + k)/k!·J_{μ₀+2k}(x).
+ */
+const fracScratch = new Float64Array(1024)
+export function besselFrac(mu0, x, nMax, out) {
+	out.fill(0, 0, nMax + 1)
+	if (x === 0) return out
+	const m = 2 * Math.ceil((Math.max(nMax, x) + 30 + 10 * Math.cbrt(x)) / 2)
+	const j = m + 2 > fracScratch.length ? new Float64Array(m + 2) : fracScratch
+	j[m + 1] = 0
+	j[m] = 1e-30
+	for (let n = m; n > 0; n--) {
+		j[n - 1] = (2 * (mu0 + n) / x) * j[n] - j[n + 1]
+		if (Math.abs(j[n - 1]) > 1e250) for (let k = n - 1; k <= m; k++) j[k] *= 1e-250
+	}
+	let g = gammaOf(mu0), sum = 0 // g = Γ(μ₀ + k)/k!
+	for (let k = 0; 2 * k <= m; k++) {
+		if (k > 0) g *= (mu0 + k - 1) / k
+		sum += (mu0 + 2 * k) * g * j[2 * k]
+	}
+	const scale = Math.pow(x / 2, mu0) / sum
+	for (let n = 0; n <= nMax; n++) out[n] = j[n] * scale
 	return out
 }
 

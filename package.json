@@ -37,7 +37,8 @@
     "test": "node --test test/*.test.js",
     "build:element": "vite build --config vite.element.config.js",
     "build:studio": "vite build --config vite.studio.config.js",
-    "icons": "node scripts/make-icons.mjs"
+    "icons": "node scripts/make-icons.mjs",
+    "plate-modes": "node scripts/plate-modes/generate.mjs"
   },
   "dependencies": {
     "web-audio-beat-detector": "^8.2.36"

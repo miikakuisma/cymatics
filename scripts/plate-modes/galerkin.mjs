@@ -28,8 +28,11 @@
 //   ∫_P φᵢφⱼ = N·∫_F (φᵢφⱼ + φ̃ᵢφ̃ⱼ), φ̃ = partnerSign·Jₙ(βr)·sin(nθ′) for a
 //   disc function. The same holds for ∇φᵢ·∇φⱼ.
 
-import { besselAllOrders } from '../../src/engine-js/modes.js'
-import { classOrders, partnerSign, polygon, thetaPrime } from '../../src/engine-js/polygons.js'
+import { besselAllOrders, besselFrac } from '../../src/engine-js/modes.js'
+import { CORNER_MAX_ORDER, classOrders, cornerFrame, cornerOrders, fundamentalTriangle, partnerSign, thetaPrime } from '../../src/engine-js/polygons.js'
+
+// Shared with the engine, which evaluates the shipped corner terms with them.
+export { besselFrac, cornerOrders, fundamentalTriangle, CORNER_MAX_ORDER }
 import { genSymEig } from './linalg.mjs'
 
 export const DISC_RADIUS = 1.5
@@ -69,49 +72,6 @@ export function neumannDiscZeros(n, kMax) {
 	return zeros
 }
 
-// Γ(z) for z ≥ 1 (Lanczos, g = 7): relative error ~1e-15.
-const LANCZOS = [0.99999999999980993, 676.5203681218851, -1259.1392167224028, 771.32342877765313,
-	-176.61502916214059, 12.507343278686905, -0.13857109526572012, 9.9843695780195716e-6, 1.5056327351493116e-7]
-function gammaAtLeast1(z) {
-	z -= 1
-	let a = LANCZOS[0]
-	for (let i = 1; i < 9; i++) a += LANCZOS[i] / (z + i)
-	const t = z + 7.5
-	return Math.sqrt(2 * Math.PI) * Math.pow(t, z + 0.5) * Math.exp(-t) * a
-}
-
-const gammas = new Map()
-const gammaOf = (mu0) => {
-	if (!gammas.has(mu0)) gammas.set(mu0, gammaAtLeast1(mu0 + 1) / mu0)
-	return gammas.get(mu0)
-}
-
-/**
- * J_{μ₀+n}(x) for n = 0..nMax into `out`, 0 < μ₀ < 1: Miller's backward
- * recurrence, normalised by (x/2)^μ₀ = Σₖ (μ₀ + 2k)·Γ(μ₀ + k)/k!·J_{μ₀+2k}(x).
- */
-const fracScratch = new Float64Array(1024)
-export function besselFrac(mu0, x, nMax, out) {
-	out.fill(0, 0, nMax + 1)
-	if (x === 0) return out
-	const m = 2 * Math.ceil((Math.max(nMax, x) + 30 + 10 * Math.cbrt(x)) / 2)
-	const j = m + 2 > fracScratch.length ? new Float64Array(m + 2) : fracScratch
-	j[m + 1] = 0
-	j[m] = 1e-30
-	for (let n = m; n > 0; n--) {
-		j[n - 1] = (2 * (mu0 + n) / x) * j[n] - j[n + 1]
-		if (Math.abs(j[n - 1]) > 1e250) for (let k = n - 1; k <= m; k++) j[k] *= 1e-250
-	}
-	let g = gammaOf(mu0), sum = 0 // g = Γ(μ₀ + k)/k!
-	for (let k = 0; 2 * k <= m; k++) {
-		if (k > 0) g *= (mu0 + k - 1) / k
-		sum += (mu0 + 2 * k) * g * j[2 * k]
-	}
-	const scale = Math.pow(x / 2, mu0) / sum
-	for (let n = 0; n <= nMax; n++) out[n] = j[n] * scale
-	return out
-}
-
 // Gauss–Legendre nodes and weights on [0, 1].
 const glCache = new Map()
 function gaussLegendre(n) {
@@ -149,12 +109,6 @@ const DUNAVANT8 = [
 	...orbit6(0.008394777409958, 0.263112829634638, 0.027230314174435),
 ]
 
-/** The fundamental triangle: origin, vertex 0, and the midpoint of edge 0. */
-export function fundamentalTriangle(sides) {
-	const { vertices } = polygon(sides)
-	const [b, c] = [vertices[0], vertices[1]]
-	return [[0, 0], b, [(b[0] + c[0]) / 2, (b[1] + c[1]) / 2]]
-}
 
 const GAUSS_ORDER = 8 // per block and direction in the corner patch
 // Inside the patch's first block, layers s ∈ [σ·s₁, s₁] down to the floor, with
@@ -224,32 +178,8 @@ export const autoSubdivisions = (betaMax) => Math.max(4, Math.ceil(QUAD_PER_UNIT
 const autoCornerBlock = (m) => Math.min(m, Math.max(4, Math.ceil(m / 4)))
 
 // Corner functions: J_μ(β r′)·cos(μ φ′) for each non-integer μ = νm up to
-// CORNER_MAX_ORDER, with β on a grid of spacing π/CORNER_REACH up to β_max.
-export const CORNER_MAX_ORDER = 8
+// CORNER_MAX_ORDER (polygons.js), with β on a grid of spacing π/CORNER_REACH up to β_max.
 export const CORNER_REACH = 2
-
-/** The non-integer corner orders μ = νm ≤ maxOrder, ν = N/(N − 2). */
-export function cornerOrders(sides, maxOrder = CORNER_MAX_ORDER) {
-	const nu = sides / (sides - 2)
-	const out = []
-	for (let m = 1; nu * m <= maxOrder + 1e-9; m++) {
-		const mu = nu * m
-		if (Math.abs(mu - Math.round(mu)) > 1e-9) out.push(mu)
-	}
-	return out
-}
-
-// Vertex 0's local frame: b̂ the inward bisector, ŵ across it towards the last
-// vertex; φ′ runs from 0 on edge 0 to α on edge N − 1, and the branch cut lies
-// outside the polygon, along −b̂.
-function cornerFrame(sides) {
-	const { vertices } = polygon(sides)
-	const V = vertices[0], last = vertices[sides - 1]
-	const bx = -V[0], by = -V[1]
-	let wx = -by, wy = bx
-	if ((last[0] - V[0]) * wx + (last[1] - V[1]) * wy < 0) { wx = -wx; wy = -wy }
-	return { vx: V[0], vy: V[1], bx, by, wx, wy, halfAngle: Math.PI * (sides - 2) / sides / 2 }
-}
 
 /**
  * The class's basis. Disc functions: one (n, β) each, n ascending, β ascending
