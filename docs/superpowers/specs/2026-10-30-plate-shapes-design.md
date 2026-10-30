@@ -11,8 +11,11 @@ another, as on a real Chladni plate. The owner wants more shapes to explore
 that way: **triangle, pentagon and hexagon** (a plain six-sided hexagon, not a
 six-pointed star).
 
-The owner chose **realism**: the figures should match what sand would really
-do on a plate of that shape, not just look five- or six-fold.
+The owner chose **realism**: the figures should be the shape's real standing
+waves, not just look five- or six-fold. What Cymatics simulates is a **liquid
+surface** — water in a dish of that shape — and the owner is happy with how
+Square and Round already look, so the new shapes follow the same physics
+Square does rather than a metal plate's.
 
 ## Goals
 
@@ -26,29 +29,24 @@ do on a plate of that shape, not just look five- or six-fold.
     as now;
   - contour mode draws only the nodal lines; every render path (contour,
     emissive, liquid, PBR) works on them as it does on Square and Round.
-- The figures are the shape's real modes as a **stiff metal Chladni plate**
-  rings them: thin-plate (Kirchhoff) bending, `D∇⁴w = ρhω²w`, with **free
-  edges** (zero bending moment and zero effective shear force on the boundary),
-  Poisson's ratio of a metal plate (~0.3). The three zero-frequency rigid-body
-  modes are not listed. A mode's `ratio` is its frequency over the lowest
-  elastic mode's frequency, so pitch spacing comes straight from the physics.
-  *(Owner's choice, after the builder check: the owner picked true stiff-plate
-  physics over matching Square's simpler drum-skin model, knowing the new
-  shapes will then be more physically faithful than Square and Round until
-  those are upgraded the same way, a separate later project.)*
-- Not modelled: the stud a real plate is bolted to at its centre, and the way
-  driving it at one point favours some modes. All modes are listed, as Square
-  and Round list theirs. *(My call.)*
+- The figures are the shape's real modes, using the **same physics as the
+  Square plate**: eigenfunctions of the Laplacian with a zero normal derivative
+  at the edge — the standing waves of a liquid surface in a vessel of that
+  shape, whose walls let no water through (`cos(mπx)cos(nπy)` is exactly this
+  on the square). Pitch follows the law Square and Round use: a mode's `ratio`
+  is its eigenvalue over the lowest non-zero eigenvalue. *(Owner's correction
+  after the builder check: an earlier draft switched to stiff metal-plate
+  physics; the owner pointed out the app simulates liquid, and what Square and
+  Round do already looks right.)*
 - Nothing is drawn outside the plate's outline, as Round does today.
 - One factory preset per new shape, alongside "Square Plate" and "Round Plate",
   so each appears as a thumbnail in the picker.
 
 ## Non-goals
 
-- Changing Square or Round, or the radiating-sources field. Moving them to
-  stiff-plate physics is a likely follow-up project, not this one; the work
-  here should make that easy (a solver and data format that a square and a
-  disc could reuse), without doing it.
+- Changing Square or Round, or the radiating-sources field. (Round uses the
+  zeros of Jₙ, a fixed edge, where water in a round dish would use the zeros of
+  Jₙ′. Noted for a possible later fix, not part of this.)
 - New sliders or controls. The only UI change is three more Field options.
 - Shapes beyond these three, or user-drawn shapes.
 
@@ -60,11 +58,11 @@ do on a plate of that shape, not just look five- or six-fold.
   actual modes. That is the specific thing the owner ruled out.
 - A visible stutter or long pause the first time a new shape is chosen, or the
   live plate's frame rate dropping on them.
-- The app's download growing by more than about **1 MB gzipped** in total for
-  all three shapes, or `<cymatics-view>` (`dist-element/cymatics-view.js`, ~443 KB
-  today) growing by more than **~250 KB gzipped**. *(My call, from the builder
-  check: the element is meant to be a light drop-in, and it carries the same
-  data.)*
+- Any bundle — the app, the studio library, `<cymatics-view>`
+  (`dist-element/cymatics-view.js`, ~443 KB today) — growing by more than
+  **~150 KB gzipped** for all three shapes. A compact form should need far
+  less: ~620 modes × a few dozen numbers each is tens of KB per shape. *(My
+  call; the owner thought an earlier 1 MB ceiling far too generous.)*
 
 ## How fine the new plates go
 
@@ -77,9 +75,11 @@ Distance.
 
 ## How (decided)
 
-- No free stiff plate has closed-form modes — not even the triangle (Lamé's
-  formulas are for the membrane). So **all three shapes' modes are computed
-  once, offline, by a script in the repo** (as `scripts/make-icons.mjs` is for the
+- **Triangle** (equilateral) has exact closed-form modes (Lamé's: sums of
+  cosine plane waves along the triangle's three directions). Computed in
+  `modes.js` at runtime like `squareModes()`, no data shipped.
+- **Pentagon and hexagon** have no closed form. Their modes are **computed once,
+  offline, by a script in the repo** (as `scripts/make-icons.mjs` is for the
   icons), and the results are **shipped with the app as data** the engine reads.
   The script is checked in so the data can be regenerated; its output is
   committed so the app build does not run it.
@@ -99,7 +99,7 @@ Distance.
 - **The element stays one module.** `npm run build:element` produces
   `dist-element/cymatics-view.js` with no imports and no fetches beyond what the
   page asks for; the studio library (`build:studio`) is hosted by the desktop
-  app. The shipped mode data must reach the engine in both builds
+  app. The shipped pentagon/hexagon data must reach the engine in both builds
   without a separate network request the host would have to serve — inlined in
   the bundle, or generated cheaply on the client from something small that is.
 - `src/engine-js/` stays self-contained (its README says so).
@@ -125,22 +125,22 @@ Distance.
 
 ## Left to the builder
 
-- **How the modes are represented and evaluated.** Two reasonable shapes of
-  answer, with their trade-off:
+- **How pentagon/hexagon modes are represented and evaluated.** Two reasonable
+  shapes of answer, with their trade-off:
   - each mode sampled on a grid and stored in a texture array — simple to
-    evaluate, but detail is capped by grid resolution and mode count by the
-    1 MB budget;
+    evaluate, but detail is capped by grid resolution, and the size budget
+    likely rules it out;
   - each mode as a short expansion the shader evaluates (for example
-    plate-equation particular solutions `[Jₙ(k·r) + c·Iₙ(k·r)]·cos/sin(nθ)`
-    restricted by the shape's symmetry, reusing and extending the existing
+    Fourier–Bessel terms `Jₙ(k·r)·cos/sin(nθ)` restricted by the shape's
+    symmetry, reusing and extending the existing
     Bessel table) — tiny data and arbitrary resolution, but convergence near
     the corners needs checking.
   Whichever is chosen, the builder demonstrates accuracy. The solver is first
-  checked on shapes with published free-plate results — the free square plate
-  (Leissa, *Vibration of Plates*) and the free disc — then its first several
-  frequencies for each new shape are compared against an independent
-  computation or published values, and its nodal lines must hold still and
-  cross the plate cleanly, with no smearing near the corners.
+  checked where the answer is exact — the square, the disc (zeros of Jₙ′) and
+  the equilateral triangle — then its first several eigenvalues for pentagon
+  and hexagon are compared against an independent computation or published
+  values, and its nodal lines must hold still and cross the plate cleanly,
+  with no smearing near the corners.
 - **Degenerate pairs.** All three shapes have modes that come in symmetric
   pairs with the same pitch, as Square's do. Square lists both combinations with a third
   of a semitone between them (`SPLIT`); do the equivalent, choosing the pair's
