@@ -126,13 +126,19 @@ export class PuhdeEqualizer extends HTMLElement {
     return this.equalizer.map((band) => band.value)
   }
 
+  // The panel and the filters (Cancel's restore).
   setGains(gains) {
-    this.equalizer = this.equalizer.map((band, i) => {
-      const value = gains[i] ?? band.value
+    this.showGains(gains)
+    for (const band of this.equalizer) {
       const filter = window[`eq${band.frequency}`]
-      if (filter) filter.gain.value = value
-      return { ...band, value }
-    })
+      if (filter) filter.gain.value = band.value
+    }
+  }
+
+  // The panel only. A rebuilt panel takes its predecessor's gains this way,
+  // leaving the filters alone: with Monitor off they are held at zero.
+  showGains(gains) {
+    this.equalizer = this.equalizer.map((band, i) => ({ ...band, value: gains[i] ?? band.value }))
     const container = this.querySelector('.bands-container')
     if (!container) return
     container.innerHTML = ''

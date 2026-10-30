@@ -226,7 +226,7 @@ export class PuhdeCymaticsControls extends HTMLElement {
       })
     }
 
-    if (eqGains) this.querySelector('p-equalizer')?.setGains(eqGains)
+    if (eqGains) this.querySelector('p-equalizer')?.showGains(eqGains)
 
     if (this.mode === 'player') {
       this.createKnob({
@@ -508,6 +508,7 @@ export class PuhdeCymaticsControls extends HTMLElement {
 
         // min/max sub-controls (shown only when Dynamic is on)
         const colorSubControls = document.createElement('div')
+        colorSubControls.className = 'auto-settings'
         colorSubControls.style.cssText = 'margin-left:10px; border-left:2px solid #226; padding-left:10px; margin-top:4px; display:none'
 
         const makeColorSubRow = (labelText, globalKey) => {
@@ -761,6 +762,7 @@ export class PuhdeCymaticsControls extends HTMLElement {
         }
 
         const subPickers = document.createElement('div')
+        subPickers.className = 'auto-settings'
         subPickers.style.cssText = 'margin-left:10px; border-left:2px solid #226; padding-left:10px; margin-top:4px; display:none'
         const makeColorRow = (labelText, globalKey) => {
           const row = document.createElement('div')
@@ -953,6 +955,7 @@ export class PuhdeCymaticsControls extends HTMLElement {
       const def = subControlDefs[control.autoKey]
       if (def && !def.isColor) {
         subControls = document.createElement('div')
+        subControls.className = 'auto-settings'
         subControls.style.cssText = 'margin-left:10px; border-left:2px solid #226; padding-left:10px; margin-top:4px; display:none'
 
         if (def.hasBand) {

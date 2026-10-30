@@ -420,36 +420,56 @@ details[open] summary:after {
 
   #app[mode="studio"] .controls.editor .tool > .control > input[type="range"] {
     width: 100%;
+  }
+
+  /* Every slider in a tool, Auto's settings included: 44px to grab. */
+  #app[mode="studio"] .controls.editor .tool .control input[type="range"] {
     height: 44px;
-    margin: 0;
+    margin-top: 0;
+    margin-bottom: 0;
     background: transparent;
   }
 
-  #app[mode="studio"] .controls.editor .tool > .control > input[type="range"]::-webkit-slider-runnable-track {
+  #app[mode="studio"] .controls.editor .tool .control input[type="range"]::-webkit-slider-runnable-track {
     height: 4px;
     border-radius: 2px;
     background: #444;
   }
 
-  #app[mode="studio"] .controls.editor .tool > .control > input[type="range"]::-webkit-slider-thumb {
+  #app[mode="studio"] .controls.editor .tool .control input[type="range"]::-webkit-slider-thumb {
     width: 24px;
     height: 24px;
     margin-top: -10px;
     background: #fff;
   }
 
-  #app[mode="studio"] .controls.editor .tool > .control > input[type="range"]::-moz-range-track {
+  #app[mode="studio"] .controls.editor .tool .control input[type="range"]::-moz-range-track {
     height: 4px;
     border-radius: 2px;
     background: #444;
   }
 
-  #app[mode="studio"] .controls.editor .tool > .control > input[type="range"]::-moz-range-thumb {
+  #app[mode="studio"] .controls.editor .tool .control input[type="range"]::-moz-range-thumb {
     width: 24px;
     height: 24px;
     border: 0;
     border-radius: 50%;
     background: #fff;
+  }
+
+  /* Auto's settings (Band, At silence, At peak, Trigger, Speed): rows 44px
+     apart, sliders taking the row's spare width. The rows' 210px and the
+     sliders' 90px are inline styles, sized for the desktop panel; only
+     !important outranks those. */
+  #app[mode="studio"] .controls.editor .auto-settings > div {
+    box-sizing: border-box;
+    width: auto !important;
+    min-height: 44px;
+  }
+
+  #app[mode="studio"] .controls.editor .auto-settings input[type="range"] {
+    flex: 1 1 0;
+    min-width: 0;
   }
 
   /* The Dynamic checkbox as an Auto pill: 26px to see, 44px to hit. */
@@ -544,7 +564,9 @@ details[open] summary:after {
   }
 
   #app[mode="studio"] .controls.editor .control:has(> input[type="checkbox"]) > label {
-    padding: 12px 0;
+    display: flex;
+    align-items: center;
+    min-height: 44px;
     font-size: 15px;
     cursor: pointer;
   }
