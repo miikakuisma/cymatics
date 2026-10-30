@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { controls } from '../src/controls.js'
-import { TABS, toolId, isRelevant, toolsFor } from '../src/studio/control-tabs.js'
+import { TABS, toolId, isRelevant, irrelevantReason, toolsFor } from '../src/studio/control-tabs.js'
 
 const byId = (id) => controls.find((c) => toolId(c) === id)
 const ripples = { cymatics: { field_mode: 0 }, renderer: { liquid_mode: false, liquid_material: 0 } }
@@ -62,6 +62,22 @@ test('water-only controls show for water, not mercury', () => {
 
 test('toolsFor keeps controls.js order and filters', () => {
 	assert.deepEqual(toolsFor('shape', controls, plate).map(toolId), ['field_mode', 'view_scale'])
+})
+
+test('irrelevantReason names why, and agrees with isRelevant everywhere', () => {
+	const squareWater = { cymatics: { field_mode: 1 }, renderer: { liquid_mode: true, liquid_material: 1 } }
+	for (const state of [ripples, plate, mercury, water, squareWater, { cymatics: {}, renderer: {} }]) {
+		for (const c of controls) {
+			const reason = irrelevantReason(c, state)
+			assert.equal(reason === null, isRelevant(c, state), toolId(c))
+			if (reason !== null) assert.ok(typeof reason === 'string' && reason.length > 0)
+		}
+	}
+	assert.equal(irrelevantReason(byId('formation'), plate), 'Not used by plate fields')
+	assert.equal(irrelevantReason(byId('contour_count'), mercury), 'Not drawn while Liquid is on')
+	assert.equal(irrelevantReason(byId('lights'), ripples), 'Turn on Liquid to use this')
+	assert.equal(irrelevantReason(byId('caustic_strength'), mercury), 'Water only')
+	assert.equal(irrelevantReason(byId('view_scale'), plate), null)
 })
 
 test('missing config keys read as engine defaults: field 0, liquid off, mercury', () => {
