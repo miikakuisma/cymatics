@@ -292,3 +292,32 @@ test('a tone above the last mode rings nothing', () => {
 	const bin = Math.round(f / (44100 / 2048))
 	for (let i = 0; i < modes.length; i++) assert.ok(!(ranges[i * 2] <= bin && bin <= ranges[i * 2 + 1]), `mode ${i} hears ${f} Hz`)
 })
+
+test('the hexagon lists the eigenvalue k = 4π/3 (the equilateral-cell mode)', () => {
+	const ks = plateStoredModes(6).map((m) => m.k)
+	assert.ok(ks.some((k) => Math.abs(k - 4 * Math.PI / 3) < 1e-6), 'no k near 4π/3 = 4.18879')
+})
+
+test('shipped eigenvalue counts follow the three-term Neumann Weyl law', () => {
+	// N(k) ≈ A k²/4π + L k/4π + C, C = Σ over corners of (π² − θ²)/(24πθ).
+	// The count has multiplicity and the constant mode (k = 0, not stored).
+	for (const N of [3, 5, 6]) {
+		const A = N / 2 * Math.sin(2 * Math.PI / N)
+		const L = 2 * N * Math.sin(Math.PI / N)
+		const theta = Math.PI * (N - 2) / N
+		const C = N * (Math.PI ** 2 - theta ** 2) / (24 * Math.PI * theta)
+		const ks = []
+		for (const m of plateStoredModes(N)) {
+			ks.push(m.k)
+			if (m.partner) ks.push(m.k)
+		}
+		ks.sort((a, b) => a - b)
+		const kLast = ks.at(-1)
+		for (const frac of [0.2, 0.4, 0.6, 0.8, 0.95]) {
+			const k = frac * kLast
+			const count = ks.filter((x) => x <= k).length + 1
+			const weyl = A * k * k / (4 * Math.PI) + L * k / (4 * Math.PI) + C
+			assert.ok(Math.abs(count - weyl) <= 4, `${N}-gon k=${k.toFixed(1)}: count ${count} vs Weyl ${weyl.toFixed(1)}`)
+		}
+	}
+})

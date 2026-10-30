@@ -115,7 +115,7 @@ The repository root *is* the app — Vite, vanilla JS web components, and the en
 - `src/element/` — `<cymatics-view>`, the engine as a web component for other pages (below).
 - `src/components/` — UI web components and the audio pipeline.
 - `docs/` — design notes.
-- `engine-test.html` — dev-only harness that drives the engine with a synthetic spectrum (`?mode=emissive|pbr`, `&field=square|round`). Not in the production build.
+- `engine-test.html` — dev-only harness that drives the engine with a synthetic spectrum (`?mode=emissive|pbr`, `&field=square|round|triangle|pentagon|hexagon`). Not in the production build.
 
 ## Architecture
 
@@ -214,8 +214,9 @@ and **5** a hexagon. Modes 3–5 are Neumann modes like Square's (a dish of wate
 not a free plate), computed offline by `npm run plate-modes` (about 14 minutes:
 a Galerkin solve over a disc Fourier–Bessel basis plus corner functions, refit as
 a centre series plus fractional-order corner terms, stored as format PLT2 in
-`src/engine-js/plate-data.js`). The picked modes are baked on the GPU into an R32F
+`src/engine-js/plate-data.js`). The picked modes are baked on the GPU into an R32F (R16F on the half-float fallback)
 LRU cache of 8 (`plate-bake.js`), so the field pass costs about what Square does.
+The triangle, pentagon and hexagon factory presets use Distance 0.25, so their 620 modes span the Tone Generator's useful range (to roughly 7 kHz and up); a larger Distance runs out of figures sooner.
 Round uses Jₙ zeros where a dish would use Jₙ′; that is noted and unchanged. On a plate, Distance (`view_scale`) is
 the plate's size and so its level of detail, contour mode draws only nodal
 lines, and Freq Detail, Contour Detail and Formation do nothing — the desktop

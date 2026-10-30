@@ -4,7 +4,7 @@
 // Polygon plates (field_mode 3–5): their free-edge (Neumann) modes, solved
 // offline by scripts/plate-modes (`npm run plate-modes`) and shipped as data in
 // plate-data.js. Here: decode it, list the modes like squareModes(), and
-// evaluate one in JS — the reference the GPU bake (Task 6) must reproduce.
+// evaluate one in JS — the reference the GPU bake must reproduce.
 //
 // A stored mode at wavenumber k is
 //
@@ -51,7 +51,7 @@
 //   uint8 code (m·4 + kind), int16 q.
 //   cᵢ = qᵢ·scale/32767 and dₜ = qₜ·scale/32767 (one scale per mode).
 //
-// For the GPU (Task 6):
+// For the GPU:
 // - plateCoeffTexture(sides): RG32F, row = stored mode, texel i = (nᵢ, cᵢ),
 //   zero past the mode's terms. Sample Tₙ from the existing Bessel table.
 // - plateCornerTexture(sides): RGBA32F, row = stored mode, texel t =

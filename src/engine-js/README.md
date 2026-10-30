@@ -14,10 +14,10 @@ sync.
 | `cymatics.js` | Wave field — envelope follower + uniform setup |
 | `modes.js` | Plate modes: Bessel functions, mode lists, picking (pure, unit-tested) |
 | `polygons.js` | Triangle, pentagon and hexagon geometry (field 3–5) |
-| `plate-modes.js` | Mode lists and picking for the polygon plates |
+| `plate-modes.js` | Mode lists for the polygon plates (picking is in `modes.js`) |
 | `plate-corners.js` | Fractional-order corner terms of the polygon modes |
 | `plate-data.js` | Shipped mode data, format PLT2 (generated, do not edit) |
-| `plate-bake.js` | Bakes picked polygon modes into an R32F LRU cache of 8 |
+| `plate-bake.js` | Bakes picked polygon modes into an R32F (R16F on the half-float fallback) LRU cache of 8 |
 | `shaders/plate_bake.fsh` | The bake pass: evaluates a mode over the plate |
 | `liquidsim.js` | Ping-pong Jacobi pressure solver |
 | `renderer.js` | PBR/refraction uniforms, emissive colour state |
@@ -64,7 +64,7 @@ every render path above draws it.
   14 minutes): a Galerkin solve over a disc Fourier–Bessel basis plus corner
   functions, refit as a centre series plus fractional-order corner terms and
   stored as format PLT2 in `plate-data.js`. At runtime the picked modes are
-  baked on the GPU (`plate-bake.js`, `shaders/plate_bake.fsh`) into an R32F
+  baked on the GPU (`plate-bake.js`, `shaders/plate_bake.fsh`) into an R32F (R16F on the half-float fallback)
   texture cache holding the last 8, so the field pass samples a texture and
   costs about what the square does.
 
@@ -112,7 +112,7 @@ gesture:
 /engine-test.html?mode=pbr
 ```
 
-Add `&field=square` or `&field=round` to drive a plate with a tone gliding
+Add `&field=square`, `round`, `triangle`, `pentagon` or `hexagon` to drive a plate with a tone gliding
 40 Hz → 5 kHz and back, and `&distance=0.5` for the largest plate.
 
 Note that `requestAnimationFrame` is throttled whenever the tab is not

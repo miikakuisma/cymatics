@@ -260,7 +260,8 @@ async function main() {
 		+ '}\n'
 	const gzip = gzipSync(source).length
 	if (gzip > GZIP_MAX) failures.push(`plate-data.js gzips to ${gzip} bytes`)
-	writeFileSync(outPath, source)
+	// A failing run must not overwrite the committed data.
+	if (!failures.length) writeFileSync(outPath, source)
 
 	console.log(`\nPlate modes — ${count} listed per shape, written to ${outPath}\n`)
 	for (const sides of shapes) {

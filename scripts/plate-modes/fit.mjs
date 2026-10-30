@@ -1,6 +1,6 @@
 // Refit a Galerkin eigenfunction as one wavenumber's Fourier–Bessel series,
 //   u ≈ Σ cᵢ·Tₙᵢ(k r)·cos|sin(nᵢθ′),   Tₙ = Jₙ / besselRowPeaks()[n],
-// the form the engine evaluates (plate-modes.js) and bakes (Task 6's shader
+// the form the engine evaluates (plate-modes.js) and bakes (the bake shader
 // samples the same normalised Bessel table rows). An eigenfunction solves
 // Δu + k²u = 0, so inside the polygon it *is* such a series, about the centre;
 // the series converges wherever u extends — everywhere for the triangle, whose
@@ -125,7 +125,7 @@ function leastSquares(A, rows, cols, b) {
 
 /**
  * The series for one mode from its values at `samples.points` (sampleModes),
- * with the class's corner terms (plate-modes.js cornerValues) at the same k.
+ * with the class's corner terms (plate-corners.js cornerValues) at the same k.
  * @returns {{ coeffs: Float64Array, orders: Int32Array, corners: { ms, kinds,
  *   coeffs }, relResidual: number }} coeffs for the first coeffs.length orders
  *   of the class; relResidual the weighted L2 misfit over the plate relative

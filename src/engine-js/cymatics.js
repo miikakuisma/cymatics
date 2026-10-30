@@ -134,6 +134,7 @@ export class Cymatics {
 		this.placeholderTex = null
 		// Polygons: baked figures (plate-bake.js), made on first use.
 		this.baker = null
+		this.bakerFailed = false
 		this.plateTex = new Array(MAX_ACTIVE_MODES).fill(null)
 
 		this.bandAmp = new Float32Array(4)
@@ -307,18 +308,26 @@ export class Cymatics {
 		gl.disable(gl.BLEND)
 
 		// Picks made on another field mean nothing on this one.
-		const modeCount = this.modeField === this.fieldMode ? this.modeCount : 0
+		let modeCount = this.modeField === this.fieldMode ? this.modeCount : 0
 		// A polygon's figures are baked here, before the field pass binds its
 		// own target: a bake is a render pass of its own.
 		const sides = POLYGON_SIDES[this.fieldMode]
 		if (sides) {
-			if (!this.baker) {
-				this.baker = new PlateBaker(this.ctx, {
-					bessel: this.ensureBesselTexture(),
-					vertexSource: FULLSCREEN_VSH,
-					fragmentSource: shader('plate_bake.fsh'),
-				})
+			// A baker that failed to build (shader compile) is not retried every
+			// frame: the failure is logged once and the plate draws blank.
+			if (!this.baker && !this.bakerFailed) {
+				try {
+					this.baker = new PlateBaker(this.ctx, {
+						bessel: this.ensureBesselTexture(),
+						vertexSource: FULLSCREEN_VSH,
+						fragmentSource: shader('plate_bake.fsh'),
+					})
+				} catch (err) {
+					this.bakerFailed = true
+					console.error('Plate baker failed to start; polygon plates draw blank', err)
+				}
 			}
+			if (!this.baker) modeCount = 0
 			for (let j = 0; j < MAX_ACTIVE_MODES; j++) {
 				this.plateTex[j] = j < modeCount ? this.baker.texture(sides, this.modeIndex[j]) : null
 			}

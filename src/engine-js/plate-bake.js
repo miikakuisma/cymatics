@@ -45,6 +45,7 @@ export function createLru(capacity) {
 			map.set(key, value)
 			return evicted
 		},
+		delete(key) { return map.delete(key) },
 		keys() { return map.keys() },
 	}
 }
@@ -151,7 +152,13 @@ export class PlateBaker {
 		const evicted = this.lru.put(key, entry)
 		// One channel is all a figure needs: R32F, or R16F under glutil's
 		// half-float fallback, which the field itself also follows.
-		entry.fbo = evicted ? evicted.fbo : new Fbo(this.ctx, this.size, this.size, { dataType: FLOAT32_SINGLE })
+		try {
+			entry.fbo = evicted ? evicted.fbo : new Fbo(this.ctx, this.size, this.size, { dataType: FLOAT32_SINGLE })
+		} catch (err) {
+			// Allocation failed: do not leave an entry with no target behind.
+			this.lru.delete(key)
+			throw err
+		}
 		this.fbos.add(entry.fbo)
 		this.bake(entry.fbo, sides, mode)
 		return entry.fbo.texture

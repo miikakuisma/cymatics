@@ -1,6 +1,8 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { defaultPresets } from '../src/default-presets.js'
+import { plateFundamentalHz } from '../src/engine-js/modes.js'
+import { polygonModes } from '../src/engine-js/plate-modes.js'
 import { controls } from '../src/controls.js'
 import { TABS, toolId, isRelevant, irrelevantReason, toolsFor } from '../src/studio/control-tabs.js'
 
@@ -106,4 +108,13 @@ test('the Field menu lists the plates, and the factory presets include the new o
 	const fieldOf = (n) => defaultPresets.find((p) => p.name === n).preset.cymatics.field_mode
 	assert.deepEqual(['Triangle Plate', 'Pentagon Plate', 'Hexagon Plate'].map(fieldOf), [3, 4, 5])
 	assert.equal(new Set(defaultPresets.map((p) => p.objectId)).size, defaultPresets.length)
+})
+
+test('the new plate presets reach at least 7 kHz at their Distance', () => {
+	const sidesOf = { 'Triangle Plate': 3, 'Pentagon Plate': 5, 'Hexagon Plate': 6 }
+	for (const [name, sides] of Object.entries(sidesOf)) {
+		const c = defaultPresets.find((p) => p.name === name).preset.cymatics
+		const hz = plateFundamentalHz(c.view_scale) * polygonModes(sides).at(-1).ratio
+		assert.ok(hz >= 7000, `${name} reaches only ${hz.toFixed(0)} Hz`)
+	}
 })
