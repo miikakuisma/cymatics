@@ -174,16 +174,16 @@ values are shown as plain numbers. *(Builder-check call.)*
 - Rendered by the engine (`src/engine-js/`) on one small hidden canvas, one
   preset after another, then the canvas and its WebGL context are disposed.
   Never one context per thumbnail: browsers cap live WebGL contexts.
-- Every thumbnail is driven by the same fixed spectrum, a frame of the idle
-  swell (`src/element/idle.js`), run for enough frames that the envelope has
+- Every thumbnail is driven by the same fixed, music-like spectrum (bass, a
+  mid bump and a broad tail), run for enough frames that the envelope has
   settled, so thumbnails are comparable and stable rather than a snapshot of
-  whatever is playing.
+  whatever is playing. *(Changed during build: the idle swell was tried first
+  and left most thumbnails near-black — the plates barely move on it.)*
 - Auto modulators **run** in the thumbnail renderer (`src/element/modulate.js`
   plus its band follower, stepped with the envelope), so a thumbnail shows what
-  the preset looks like at rest on the idle swell, which is what tapping it
-  shows with nothing playing. All three factory presets have Line Color and
-  Freq Detail on Auto, so base values alone would draw a visibly different
-  pattern. *(Builder-check call.)*
+  the preset looks like with music playing, Auto colours and detail included.
+  All three factory presets have Line Color and Freq Detail on Auto, so base
+  values alone would draw a visibly different pattern. *(Builder-check call.)*
 - Square, the same crop the plate shows. Size around 128px on the long side,
   device-pixel aware.
 - Cached by a hash of the preset's content, kept across visits (IndexedDB,
