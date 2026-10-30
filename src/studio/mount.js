@@ -53,7 +53,8 @@ const ABOUT = `
 // cymatics-presets as a sheet, the editor is cymatics-controls, and the plate
 // makes room above them (fitPlate). studio-active is what lets the sheet show
 // at all. Off a phone it only clears the phone's own marks: the desktop studio
-// is showDesk's, and a resize to desktop sets it after leaving the phone.
+// is initDeskStudio's callback's, and a resize to desktop sets it after
+// leaving the phone.
 function show(phase) {
   const phone = phoneQuery().matches
   const open = phone && phase !== 'closed'
@@ -223,19 +224,19 @@ const launchApp = () => {
   cogBtn.title = 'Toggle studio mode (Tab)'
   app.appendChild(cogBtn)
 
-  // The desktop studio: the one panel, the nav and the cog, all at once. On
-  // a phone the studio is phoneStudio()'s phases instead (show() above).
-  // studio-desk is what slides the panel in and gives the plate the stage
-  // beside it; studio-active is what shows the nav.
-  initDeskStudio((on) => {
-    const desk = on && !phoneQuery().matches
+  // The desktop studio (desk-studio.js): `on` shows the nav and lights the
+  // cog (studio-active); `panel` slides the one panel in and gives the plate
+  // the stage beside it (studio-desk), and lights both nav buttons. On a
+  // phone the studio is phoneStudio()'s phases instead (show() above).
+  initDeskStudio(({ on, panel }) => {
+    const desk = panel && !phoneQuery().matches
     document.body.classList.toggle('studio-active', on)
     document.body.classList.toggle('studio-desk', desk)
     cogBtn.classList.toggle('active', on)
-    s('cymatics-presets').setAttribute('visible', on ? 'true' : 'false')
-    s('cymatics-controls').setAttribute('visible', on ? 'true' : 'false')
-    s('[fn="presets"]')?.classList.toggle('activated', on)
-    s('[fn="edit"]')?.classList.toggle('activated', on)
+    s('cymatics-presets').setAttribute('visible', panel ? 'true' : 'false')
+    s('cymatics-controls').setAttribute('visible', panel ? 'true' : 'false')
+    s('[fn="presets"]')?.classList.toggle('activated', panel)
+    s('[fn="edit"]')?.classList.toggle('activated', panel)
     fitPlate(phoneStudio().phase)
   })
 
@@ -258,13 +259,13 @@ const launchApp = () => {
 
   // Crossing between phone and desktop. To desktop, an open phone studio ends
   // as Done and the desktop studio opens in its place; to a phone, an open
-  // desktop studio becomes the picker. Turning a phone sideways is no change
+  // desktop panel becomes the picker. Turning a phone sideways is no change
   // here (both ways up are phone), so an edit session lives through it.
   phoneQuery().addEventListener('change', () => {
     const studio = phoneStudio()
     studioPanel.classList.toggle('desk', !phoneQuery().matches)
     if (phoneQuery().matches) {
-      const wasOpen = deskStudio().open
+      const wasOpen = deskStudio().panel
       deskStudio().close()
       show('closed')
       if (wasOpen) studio.open('picker')

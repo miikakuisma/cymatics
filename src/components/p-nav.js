@@ -72,7 +72,7 @@ export class PuhdeNav extends HTMLElement {
             return
           }
           // On desktop both buttons toggle the one panel, and both light.
-          deskStudio().toggle()
+          deskStudio().togglePanel()
         })
 
         this.querySelector('[fn="play"]').addEventListener('click', () => {
@@ -86,13 +86,13 @@ export class PuhdeNav extends HTMLElement {
             else studio.open('editor')
             return
           }
-          deskStudio().toggle()
+          deskStudio().togglePanel()
         })
 
         // Sync activated state with the studio as it is now.
         if (phoneQuery().matches) {
           this.syncPhone()
-        } else if (deskStudio().open) {
+        } else if (deskStudio().panel) {
           this.querySelector('[fn="presets"]').classList.add('activated')
           this.querySelector('[fn="edit"]').classList.add('activated')
         }

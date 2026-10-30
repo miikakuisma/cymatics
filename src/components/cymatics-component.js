@@ -511,7 +511,7 @@ window.engine = class engine {
 							// above it.
 							s('p-cymatics').addEventListener('click', () => {
 								if (phoneQuery().matches) return
-								deskStudio().close()
+								deskStudio().closePanel()
 							})
 
 							const isTouchDevice = window.matchMedia('(hover: none)').matches
