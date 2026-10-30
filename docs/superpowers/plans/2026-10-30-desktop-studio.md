@@ -51,14 +51,18 @@ unchanged; no edits to `src/engine-js/**`, `src/controls.js`,
 **Files:** `src/studio/mount.js`, `src/components/studio-panel.css` (new),
 `src/components/p-nav.js`, `src/components/cymatics-component.js`
 (plate tap), `src/components/cymatics-component.css`,
-`src/components/p-nav.css`, `src/components/p-audio.css`, `styles.css`
-(fullscreen button), `test/phone-query.test.js` (new CSS file listed).
+`test/desk-studio.test.js`.
 
-- `div.studio-panel` holds `cymatics-presets` then `cymatics-controls`.
-  `.desk` on it (desktop layout, set from `phoneQuery()`) makes it a 320px
-  fixed column; `body.studio-desk` (desktop studio open) slides it in.
-- `setStudio` → `deskStudio().set`; cog, Tab, nav grid, nav sliders and the
-  plate tap call `deskStudio().toggle()` / `close()` off a phone.
+- `div.studio-panel` holds `cymatics-controls` then `cymatics-presets` (the
+  phone's order; CSS `order` puts presets on top on desktop). `.desk` on it
+  (desktop layout, set from `phoneQuery()`) makes it a 320px fixed column;
+  `body.studio-desk` (panel open) slides it in. The nav, popup and
+  fullscreen-button moves live in `studio-panel.css` too, keyed off
+  `body.studio-desk`; it has no phone rules, so `phone-query.test.js` does
+  not list it.
+- `setStudio` → `deskStudio()`, two switches: the studio (`studio-active`,
+  nav shown, cog lit) and its panel. Cog and Tab switch both; nav grid and
+  sliders switch only the panel; a plate tap closes only the panel.
 - The plate: the wrapper stops at the panel; `p-cymatics` is the largest
   square in the stage; canvas scales during the slide and is resized after
   (`fitPlate`'s timer, as on phone). The nav, the source menu, the tone
@@ -74,8 +78,11 @@ unchanged; no edits to `src/engine-js/**`, `src/controls.js`,
   Looks grid, Presets grid (factory, own, ＋ Save). The selected own tile's ⋯
   holds Rename, Delete and all host actions (`needsSaved` disabled unless
   own), exactly as on phone. Thumbnails through `paint()`.
-- Menu CSS moves out of the phone query (identical rules, so phone is
-  unchanged); desktop tile CSS is its own block (4 across).
+- The phone's tile and menu CSS stays under its query untouched; the
+  desktop's tiles (4 across) and menus are their own block, mouse-sized, with
+  a `(pointer: coarse)` bump to 44px in `studio-panel.css`. The open
+  preset's name and the save / error note stay in view at the top while the
+  grids scroll.
 
 ### Task 4: Tabs, controls and footer
 

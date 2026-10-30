@@ -93,6 +93,10 @@ export class PuhdeCymaticsPresets extends HTMLElement {
 		`
 			: `
 			<div class="presets desk">
+				<div class="desk-top">
+					<div class="desk-head"></div>
+					<p class="preset-note"></p>
+				</div>
 				<div class="desk-body"></div>
 			</div>
 		`
@@ -176,19 +180,21 @@ export class PuhdeCymaticsPresets extends HTMLElement {
 	// The desktop panel's top: the open preset's name, then Looks and Presets
 	// as grids. Save, Save As… and Set as Default are the panel's footer
 	// (cymatics-controls), so the header's ⋯ holds only the host's actions
-	// that need no saved preset, and is left out when there are none.
+	// that need no saved preset, and is left out when there are none. The
+	// header and the note under it (say) stay in view as the grids scroll.
 	listDesk() {
 		const body = this.querySelector('.desk-body')
-		if (!body) return
+		const old = this.querySelector('.desk-head')
+		if (!body || !old) return
 		closeMenu()
 		const head = this.heading('desk-head')
 		const actions = host().actions.filter((action) => !action.needsSaved)
 		if (actions.length) {
 			head.append(moreButton('Preset options', (anchor) => openMenu(anchor, actions.map((action) => this.actionItem(action)), this)))
 		}
+		old.replaceWith(head)
 		const { looks, presets } = this.tiles()
 		body.replaceChildren(
-			head,
 			label('Looks'), grid(looks),
 			label('Presets'), grid(presets),
 		)

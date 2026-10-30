@@ -16,6 +16,9 @@
 }
 
 #app .studio-panel.desk {
+  /* The panel's gutter and accent, for both parts inside it. */
+  --desk-gutter: 16px;
+  --desk-accent: #8fa6ff;
   position: fixed;
   top: 0;
   right: 0;
@@ -100,4 +103,44 @@ body.studio-desk #app p-audio .osc-overlay {
 
 body.studio-desk .simple-fullscreen-btn {
   right: calc(var(--studio-panel) + 12px + env(safe-area-inset-right));
+}
+
+/* A touch screen wide enough for the desktop panel (an iPad on its side):
+   44px to hit, wherever the panel's mouse-sized parts allow. Here rather
+   than beside the parts' own rules, whose files keep "pointer: coarse" for
+   PHONE_QUERY alone (test/phone-query.test.js). */
+@media (pointer: coarse) {
+
+  #app .studio-panel.desk .presets.desk .sheet-more {
+    width: 44px;
+    height: 44px;
+  }
+
+  #app .studio-panel.desk .presets.desk .tile-more::after,
+  #app .studio-panel.desk .controls.desk .auto-toggle::after {
+    content: '';
+    position: absolute;
+    inset: -11px;
+  }
+
+  #app .studio-panel.desk .controls.desk .auto-toggle {
+    position: relative;
+  }
+
+  #app .studio-panel.desk .controls.desk .auto-toggle::after {
+    inset: -12px -4px;
+  }
+
+  #app .studio-panel.desk cymatics-presets .sheet-menu button,
+  #app .studio-panel.desk .controls.desk .desk-tabs .desk-tab,
+  #app .studio-panel.desk .controls.desk .desk-foot button {
+    min-height: 44px;
+    height: 44px;
+  }
+
+  #app .studio-panel.desk .controls.desk .control input[type="range"] {
+    height: 44px;
+    margin-top: 0;
+  }
+
 }

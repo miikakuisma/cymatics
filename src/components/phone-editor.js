@@ -10,7 +10,7 @@ import { TABS } from '../studio/control-tabs.js'
 export const EQ_TOOL = { id: 'eq', label: 'EQ', icon: 'eq', tab: 'audio' }
 
 // The band meter, at the top of the desktop's Audio tab. (The phone has none.)
-export const METER_TOOL = { id: 'meter', label: 'Bands', tab: 'audio' }
+export const METER_TOOL = { id: 'meter', tab: 'audio' }
 
 const el = (tag, className, text) => {
 	const node = document.createElement(tag)
@@ -85,7 +85,7 @@ export function deskShell({ onTab, onSave, onSaveAs, onSetDefault }) {
 		foot.append(setDefault)
 	}
 	panel.append(tabs, tools, foot)
-	return { panel, tools }
+	return { panel }
 }
 
 // One tool's control. `big` ones (anything not a single slider) always take

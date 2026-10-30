@@ -236,11 +236,18 @@ export class PuhdeCymaticsControls extends HTMLElement {
 
     // In the studio this also shows the selected tab or tool (applyFieldMode).
     this.updateControlsFromEngineState()
+
+    // Back where it was scrolled to (renderDesk), now the tab is filled again.
+    const tools = this.querySelector('.controls.desk .desk-tools')
+    if (tools) tools.scrollTop = this.deskScroll ?? 0
   }
 
   // The desktop panel's lower part: the five tabs, all of the selected tab's
-  // controls, and Save / Save As… / Set as Default (standalone only).
+  // controls, and Save / Save As… / Set as Default (standalone only). Rebuilt
+  // on every preset load, so it keeps how far the controls were scrolled
+  // (render puts it back).
   renderDesk() {
+    this.deskScroll = this.querySelector('.controls.desk .desk-tools')?.scrollTop ?? 0
     const presets = () => s('cymatics-presets')
     const { panel } = deskShell({
       onTab: (tab) => this.selectTab(tab),
@@ -306,8 +313,11 @@ export class PuhdeCymaticsControls extends HTMLElement {
     if (tab === this.tab) return
     this.tab = tab
     this.tool = this.toolByTab[tab] ?? null
-    if (this.isMobileStudio) this.syncEditor()
-    else this.syncDesk()
+    if (this.isMobileStudio) return this.syncEditor()
+    this.syncDesk()
+    // Another tab's controls start from their top.
+    const tools = this.querySelector('.controls.desk .desk-tools')
+    if (tools) tools.scrollTop = 0
   }
 
   selectTool(id) {

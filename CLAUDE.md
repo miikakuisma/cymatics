@@ -100,9 +100,11 @@ controls at once (`renderDesk` / `syncDesk`, `deskShell` in `phone-editor.js`),
 the band meter heading Audio; then Save, Save As…, Set as Default (standalone).
 Controls that do nothing now are greyed with `irrelevantReason`
 (`control-tabs.js`) as their title — the phone hides the same ones. No Adjust,
-no Cancel: edits are live. Open / closed is `deskStudio()`
-(`src/studio/desk-studio.js`): the cog, Tab, both nav buttons and a tap on the
-plate go through it; `body.studio-desk` slides the panel in and moves the plate,
+no Cancel: edits are live. `deskStudio()` (`src/studio/desk-studio.js`) has two
+switches: the studio (`studio-active`: the nav shows, the cog is lit) and its
+panel. The cog and Tab switch both; the nav's grid and sliders buttons switch
+only the panel and a tap on the plate closes only the panel, so the nav and its
+play button stay. `body.studio-desk` slides the panel in and moves the plate,
 nav, source popups and fullscreen button into the stage.
 
 ## Project Structure
@@ -209,8 +211,9 @@ radiating sources, the default every existing preset uses; **1** a square plate
 and **2** a round plate, ringing their own standing-wave modes (Chladni
 figures), from `src/engine-js/modes.js`. On a plate, Distance (`view_scale`) is
 the plate's size and so its level of detail, contour mode draws only nodal
-lines, and Freq Detail, Contour Detail and Formation do nothing — the studio
-greys them out (`sourcesOnly` in `controls.js`). Details in the engine README.
+lines, and Freq Detail, Contour Detail and Formation do nothing — the desktop
+studio greys them out and the phone hides them (`PLATE_HIDES` /
+`irrelevantReason` in `src/studio/control-tabs.js`). Details in the engine README.
 
 The **Tone Generator** source (`tone`, `p-audio.js`) plays one sine — 20 Hz–10 kHz
 on a logarithmic slider, or any typed value from 1 Hz to 20 kHz — for finding

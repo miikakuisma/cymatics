@@ -41,55 +41,12 @@ input[type="range"]::-webkit-slider-thumb {
 
 }
 
-#app[mode="studio"] .controls {
-  position: fixed;
-  top: env(safe-area-inset-top);
-  right: 0;
-  left: unset;
-  bottom: unset;
-  z-index: 3;
-  background: #111;
-  flex-direction: column;
-  width: 260px;
-  height: 100%;
-  padding: 0 5px 0 7px;
-  transform: translateX(300px);
-  overflow-x: hidden;
-  overflow-y: auto;
-  transition: transform .39s ease-in-out, padding .618s ease-in-out;
-}
-
 .controls .group {
   display: flex;
 }
 
 .controls .group:before {
   position: absolute;
-}
-
-#app[mode="studio"] .controls .group {
-  display: block;
-}
-
-summary {
-  text-transform: uppercase;
-  cursor: pointer;
-  color: white;
-  height: 23px;
-  margin: 10px 10px 20px 10px;
-  padding: 5px 0px 0px 0px;
-  font-size: 13px;
-  font-weight: bold;
-  position: relative;
-}
-
-details {
-  width: 100%;
-  position: relative;
-}
-
-details[open] summary:after {
-  transform: rotate(45deg);
 }
 
 .controls p-knob {
@@ -197,14 +154,6 @@ details[open] summary:after {
 }
 
 
-@media (max-width: 620px) {
-
-  #app[mode="studio"] .controls {
-    max-height: calc(100% - 60px);
-  }
-
-}
-
 /* Phone editor: one control at a time. From the bottom up, above the nav:
    the tabs, the tab's tool icons, the selected tool. Cancel and Done sit at
    the top of the screen. The query is PHONE_QUERY (src/studio/layout.js). */
@@ -217,6 +166,7 @@ details[open] summary:after {
   }
 
   #app[mode="studio"] .controls.editor {
+    position: fixed;
     top: auto;
     right: 0;
     bottom: var(--editor-bottom);
@@ -686,22 +636,11 @@ details[open] summary:after {
    the selected tab's tools show (.tool.selected); ones that do nothing now
    are dimmed (.irrelevant), with the reason as their title. */
 #app[mode="studio"] .controls.desk {
-  --desk-gutter: 16px;
-  --desk-accent: #8fa6ff;
-  position: static;
-  z-index: auto;
   display: flex;
   flex: 1 1 0;
   flex-direction: column;
-  width: auto;
-  height: auto;
   min-height: 0;
-  padding: 0;
   overflow: hidden;
-  background: none;
-  color: #eee;
-  transform: none;
-  transition: none;
 }
 
 .controls.desk .desk-tabs button,
