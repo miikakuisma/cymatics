@@ -87,6 +87,26 @@ live plate keeps its frame rate and cached in their own IndexedDB database,
 `CymaticsThumbs` (`thumb-cache.js`). The sheet's and editor's parts are built in
 `src/components/presets-sheet.js` and `phone-editor.js`.
 
+## Desktop studio
+
+Anything that is not a phone gets one panel on the right (320px, `--studio-panel`)
+and the plate takes the stage left of it. `mount.js` puts `cymatics-presets` and
+`cymatics-controls` in one `div.studio-panel` — `display: contents` on a phone,
+the fixed column when marked `.desk` (`src/components/studio-panel.css`). Top:
+the open preset's name, then Looks and Presets as grids of the same thumbnails
+(`listDesk`, `grid()` in `presets-sheet.js`), the selected own tile's ⋯ holding
+Rename, Delete and the host's actions. Below: the five tabs, all of a tab's
+controls at once (`renderDesk` / `syncDesk`, `deskShell` in `phone-editor.js`),
+the band meter heading Audio; then Save, Save As…, Set as Default (standalone).
+Controls that do nothing now are greyed with `irrelevantReason`
+(`control-tabs.js`) as their title — the phone hides the same ones. No Adjust,
+no Cancel: edits are live. `deskStudio()` (`src/studio/desk-studio.js`) has two
+switches: the studio (`studio-active`: the nav shows, the cog is lit) and its
+panel. The cog and Tab switch both; the nav's grid and sliders buttons switch
+only the panel and a tap on the plate closes only the panel, so the nav and its
+play button stay. `body.studio-desk` slides the panel in and moves the plate,
+nav, source popups and fullscreen button into the stage.
+
 ## Project Structure
 
 The repository root *is* the app — Vite, vanilla JS web components, and the engine.
@@ -191,8 +211,9 @@ radiating sources, the default every existing preset uses; **1** a square plate
 and **2** a round plate, ringing their own standing-wave modes (Chladni
 figures), from `src/engine-js/modes.js`. On a plate, Distance (`view_scale`) is
 the plate's size and so its level of detail, contour mode draws only nodal
-lines, and Freq Detail, Contour Detail and Formation do nothing — the studio
-greys them out (`sourcesOnly` in `controls.js`). Details in the engine README.
+lines, and Freq Detail, Contour Detail and Formation do nothing — the desktop
+studio greys them out and the phone hides them (`PLATE_HIDES` /
+`irrelevantReason` in `src/studio/control-tabs.js`). Details in the engine README.
 
 The **Tone Generator** source (`tone`, `p-audio.js`) plays one sine — 20 Hz–10 kHz
 on a logarithmic slider, or any typed value from 1 Hz to 20 kHz — for finding

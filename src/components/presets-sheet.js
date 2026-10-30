@@ -1,5 +1,5 @@
-// The phone picker's parts: thumbnail tiles, rows of them, and the small
-// popover menus. cymatics-presets decides what goes in them and what a tap does.
+// The picker's parts, on both layouts: thumbnail tiles, rows (phone) or grids
+// (desktop) of them, and the small popover menus. cymatics-presets decides what goes in them and what a tap does.
 
 const el = (tag, className, text) => {
 	const node = document.createElement(tag)
@@ -26,6 +26,14 @@ export function row(tiles) {
 	return r
 }
 
+// The desktop panel's version of a row: tiles four across, wrapping.
+export function grid(tiles) {
+	const g = el('div', 'sheet-grid')
+	g.setAttribute('role', 'list')
+	g.append(...tiles)
+	return g
+}
+
 // One preset as a thumbnail and its name. The picture is a dark placeholder
 // until `img` is given a src. `more` opens the tile's menu: a ⋯ badge, shown
 // on the selected tile only.
@@ -35,6 +43,8 @@ export function tile({ name, current = false, onPick, more = null, glyph = null 
 	t.classList.toggle('current', current)
 	const pick = button('tile-pick', '', onPick)
 	pick.setAttribute('aria-pressed', String(current))
+	// The whole name, for a pointer, where the tile's is cut short.
+	pick.title = name
 	const thumb = el('span', 'tile-thumb')
 	const img = el('img')
 	img.alt = ''

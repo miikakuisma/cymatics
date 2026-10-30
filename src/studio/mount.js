@@ -7,6 +7,7 @@ import '../../styles.css'
 import "../components/cymatics-component.css"
 import "../components/cymatics-controls.css"
 import "../components/cymatics-presets.css"
+import "../components/studio-panel.css"
 import "../components/pole-config.css"
 import "../components/p-nav.css"
 import "../components/knob.css"
@@ -34,6 +35,7 @@ import { host, setHost } from './host.js'
 import { overDefaults, setEngineDefaults } from './look-config.js'
 import { phoneQuery } from './layout.js'
 import { initPhoneStudio, phoneStudio } from './phone-studio.js'
+import { deskStudio, initDeskStudio } from './desk-studio.js'
 import { captureStudio, restoreStudio } from './studio-snapshot.js'
 
 const ABOUT = `
@@ -51,7 +53,8 @@ const ABOUT = `
 // cymatics-presets as a sheet, the editor is cymatics-controls, and the plate
 // makes room above them (fitPlate). studio-active is what lets the sheet show
 // at all. Off a phone it only clears the phone's own marks: the desktop studio
-// is setStudio's, and a resize to desktop sets it after leaving the phone.
+// is initDeskStudio's callback's, and a resize to desktop sets it after
+// leaving the phone.
 function show(phase) {
   const phone = phoneQuery().matches
   const open = phone && phase !== 'closed'
@@ -104,7 +107,10 @@ function fitPlate(phase) {
     }
   }
 
-  const key = PLATE_ROOM.filter((name) => wrapper.classList.contains(name)).join() + JSON.stringify(room)
+  // On desktop the CSS gives the plate the stage left of the open panel
+  // (body.studio-desk, studio-panel.css); only the canvas needs telling.
+  const desk = !phone && document.body.classList.contains('studio-desk')
+  const key = PLATE_ROOM.filter((name) => wrapper.classList.contains(name)).join() + desk + JSON.stringify(room)
   if (key === plateKey) return
   plateKey = key
   // The canvas keeps its pixel size until told. Told once the plate has
@@ -190,13 +196,21 @@ const launchApp = () => {
   })
   }
 
-  // Studio UI (always in DOM, shown/hidden via studio-active class)
+  // Studio UI (always in DOM, shown/hidden via studio-active class). Both
+  // parts sit in one panel: on desktop a column on the right, presets above
+  // controls (studio-panel.css); on a phone no box at all, its two children
+  // being sheets of their own.
+  const studioPanel = document.createElement('div')
+  studioPanel.className = 'studio-panel'
+  studioPanel.classList.toggle('desk', !phoneQuery().matches)
+  app.appendChild(studioPanel)
+
   const cymaticsControls = document.createElement('cymatics-controls')
   cymaticsControls.setAttribute('visible', 'false')
-  app.appendChild(cymaticsControls)
+  studioPanel.appendChild(cymaticsControls)
 
   const cymaticsPresets = document.createElement('cymatics-presets')
-  app.appendChild(cymaticsPresets)
+  studioPanel.appendChild(cymaticsPresets)
 
   const puhdeNav = document.createElement('p-nav')
   app.appendChild(puhdeNav)
@@ -210,23 +224,26 @@ const launchApp = () => {
   cogBtn.title = 'Toggle studio mode (Tab)'
   app.appendChild(cogBtn)
 
-  // The desktop studio: both panels, the nav and the cog, all at once. On a
+  // The desktop studio (desk-studio.js): `on` shows the nav and lights the
+  // cog (studio-active); `panel` slides the one panel in and gives the plate
+  // the stage beside it (studio-desk), and lights both nav buttons. On a
   // phone the studio is phoneStudio()'s phases instead (show() above).
-  let studioActive = false
-  const setStudio = (on) => {
-    studioActive = on
+  initDeskStudio(({ on, panel }) => {
+    const desk = panel && !phoneQuery().matches
     document.body.classList.toggle('studio-active', on)
+    document.body.classList.toggle('studio-desk', desk)
     cogBtn.classList.toggle('active', on)
-    s('cymatics-presets').setAttribute('visible', on ? 'true' : 'false')
-    s('cymatics-controls').setAttribute('visible', on ? 'true' : 'false')
-    s('[fn="presets"]')?.classList.toggle('activated', on)
-    s('[fn="edit"]')?.classList.toggle('activated', on)
-  }
+    s('cymatics-presets').setAttribute('visible', panel ? 'true' : 'false')
+    s('cymatics-controls').setAttribute('visible', panel ? 'true' : 'false')
+    s('[fn="presets"]')?.classList.toggle('activated', panel)
+    s('[fn="edit"]')?.classList.toggle('activated', panel)
+    fitPlate(phoneStudio().phase)
+  })
 
   // The cog and Tab. On a phone they open the picker, or close whatever is
   // open, keeping any edits (only Cancel reverts).
   const toggleStudio = () => {
-    if (!phoneQuery().matches) return setStudio(!studioActive)
+    if (!phoneQuery().matches) return deskStudio().toggle()
     const studio = phoneStudio()
     if (studio.phase === 'closed') studio.open('picker')
     else studio.close()
@@ -235,24 +252,27 @@ const launchApp = () => {
   // A hosted studio opens on the studio: that is what it was opened for.
   if (isAdvanced || !standalone) {
     if (phoneQuery().matches) phoneStudio().open('picker')
-    else setStudio(true)
+    else deskStudio().set(true)
   }
 
   cogBtn.addEventListener('click', toggleStudio)
 
   // Crossing between phone and desktop. To desktop, an open phone studio ends
   // as Done and the desktop studio opens in its place; to a phone, an open
-  // desktop studio becomes the picker. Turning a phone sideways is no change
+  // desktop panel becomes the picker. Turning a phone sideways is no change
   // here (both ways up are phone), so an edit session lives through it.
   phoneQuery().addEventListener('change', () => {
     const studio = phoneStudio()
+    studioPanel.classList.toggle('desk', !phoneQuery().matches)
     if (phoneQuery().matches) {
+      const wasOpen = deskStudio().panel
+      deskStudio().close()
       show('closed')
-      if (studioActive) studio.open('picker')
+      if (wasOpen) studio.open('picker')
     } else {
       const wasOpen = studio.phase !== 'closed'
       studio.leavePhone()
-      setStudio(wasOpen)
+      deskStudio().set(wasOpen)
     }
   })
 

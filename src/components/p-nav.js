@@ -1,5 +1,6 @@
 import { phoneQuery } from '../studio/layout.js'
 import { phoneStudio } from '../studio/phone-studio.js'
+import { deskStudio } from '../studio/desk-studio.js'
 
 export class PuhdeNav extends HTMLElement {
 
@@ -70,14 +71,8 @@ export class PuhdeNav extends HTMLElement {
             else studio.close()
             return
           }
-          const isVisible = s('cymatics-presets').getAttribute('visible') === 'true'
-          if (!isVisible) {
-            s('cymatics-presets').setAttribute('visible', 'true')
-            e.target.classList.add('activated')
-          } else {
-            s('cymatics-presets').setAttribute('visible', 'false')
-            e.target.classList.remove('activated')
-          }
+          // On desktop both buttons toggle the one panel, and both light.
+          deskStudio().togglePanel()
         })
 
         this.querySelector('[fn="play"]').addEventListener('click', () => {
@@ -91,24 +86,15 @@ export class PuhdeNav extends HTMLElement {
             else studio.open('editor')
             return
           }
-          const isVisible = s('cymatics-controls').getAttribute('visible') === 'true'
-          if (!isVisible) {
-            s('cymatics-controls').setAttribute('visible', 'true')
-            e.target.classList.add('activated')
-          } else {
-            s('cymatics-controls').setAttribute('visible', 'false')
-            e.target.classList.remove('activated')
-          }
+          deskStudio().togglePanel()
         })
 
-        // Sync activated state with current panel visibility
+        // Sync activated state with the studio as it is now.
         if (phoneQuery().matches) {
           this.syncPhone()
-        } else {
-          if (s('cymatics-presets')?.getAttribute('visible') === 'true')
-            this.querySelector('[fn="presets"]').classList.add('activated')
-          if (s('cymatics-controls')?.getAttribute('visible') === 'true')
-            this.querySelector('[fn="edit"]').classList.add('activated')
+        } else if (deskStudio().panel) {
+          this.querySelector('[fn="presets"]').classList.add('activated')
+          this.querySelector('[fn="edit"]').classList.add('activated')
         }
 
         // this.querySelector('[fn="cover"]').addEventListener('click', (e) => {

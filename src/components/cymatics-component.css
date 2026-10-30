@@ -98,6 +98,15 @@ p-cymatics img#frame {
   }
 }
 
+/* While the plate changes size (a phone's sheet, the desktop panel) the
+   canvas scales with it; mount.js (fitPlate) has it redrawn at the new size
+   once the plate has settled. At rest the canvas is the plate's size anyway.
+   A covering plate is not square, and is left as it was. */
+#app[mode="studio"] p-cymatics:not([cover="true"]) canvas {
+  width: 100% !important;
+  height: 100% !important;
+}
+
 /* ── Phone: room for the plate ─────────────────────────────────────────────
    While the picker or the editor is open, mount.js (fitPlate) marks the
    wrapper .sheet-picker or .sheet-editor and measures the space the panel
@@ -111,14 +120,6 @@ p-cymatics img#frame {
 
   #app[mode="studio"] .cymatics-wrapper {
     transition: top .39s ease-in-out, height .39s ease-in-out, right .39s ease-in-out;
-  }
-
-  /* While the plate changes size the canvas scales with it; mount.js has it
-     redrawn at the new size once the plate has settled. A covering plate is
-     not square, and is left as it was. */
-  #app[mode="studio"] p-cymatics:not([cover="true"]) canvas {
-    width: 100% !important;
-    height: 100% !important;
   }
 
   #app[mode="studio"] .cymatics-wrapper:is(.sheet-picker, .sheet-editor) {
