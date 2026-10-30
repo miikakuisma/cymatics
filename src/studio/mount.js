@@ -46,12 +46,16 @@ const ABOUT = `
   </div>
 `
 
-// What each phone phase puts on screen. The picker is cymatics-presets as a
-// sheet; studio-active is what lets it show at all.
+// What each phone phase puts on screen, one at a time: the picker is
+// cymatics-presets as a sheet, the editor is cymatics-controls.
+// studio-active is what lets the sheet show at all.
 function show(phase) {
-  const picker = phoneQuery().matches && phase === 'picker'
-  document.body.classList.toggle('studio-active', picker)
+  const phone = phoneQuery().matches
+  const picker = phone && phase === 'picker'
+  const editor = phone && phase === 'editor'
+  document.body.classList.toggle('studio-active', picker || editor)
   s('cymatics-presets').setAttribute('visible', picker ? 'true' : 'false')
+  if (phone) s('cymatics-controls').setAttribute('visible', editor ? 'true' : 'false')
 }
 
 const launchApp = () => {

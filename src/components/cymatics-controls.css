@@ -261,106 +261,447 @@ details[open] summary:after {
   }
 }
 
-/* Mobile studio: tabbed bottom drawer instead of right sidebar */
-@media (max-width: 768px) {
+/* Phone editor: one control at a time. From the bottom up, above the nav:
+   the tabs, the tab's tool icons, the selected tool. Cancel and Done sit at
+   the top of the screen. The query is PHONE_QUERY (src/studio/layout.js). */
+@media (max-width: 768px), (pointer: coarse) and (max-height: 500px) {
 
-  #app[mode="studio"] .controls.mobile-studio {
-    position: fixed;
-    left: 0;
-    right: 0;
-    bottom: calc(env(safe-area-inset-bottom) + 48px);
+  cymatics-controls {
+    --editor-bottom: calc(48px + env(safe-area-inset-bottom));
+    --editor-gutter: 16px;
+    --editor-accent: #8fa6ff;
+  }
+
+  #app[mode="studio"] .controls.editor {
     top: auto;
-    width: 100vw;
-    height: 45vh;
-    max-height: 45vh;
-    flex-direction: column;
-    display: flex;
-    background: #111;
-    transform: translateY(calc(45vh + 48px));
-    transition: transform .39s ease-in-out;
-    overflow: hidden;
+    right: 0;
+    bottom: var(--editor-bottom);
+    left: 0;
     z-index: 3;
-    padding: 0;
-  }
-
-  #app[mode="studio"] .controls.mobile-studio .tab-bar {
     display: flex;
-    height: 40px;
-    min-height: 40px;
-    border-bottom: 1px solid #222;
+    flex-direction: column;
+    width: auto;
+    height: auto;
+    max-height: none;
+    padding: 8px 0 0;
+    overflow: hidden;
+    background: rgb(14 14 16 / 94%);
+    -webkit-backdrop-filter: blur(24px);
+    backdrop-filter: blur(24px);
+    border-radius: 18px 18px 0 0;
+    color: #eee;
+    visibility: hidden;
+    transform: translateY(calc(100% + var(--editor-bottom)));
+    transition: transform .3s ease-out, visibility 0s linear .3s;
   }
 
-  #app[mode="studio"] .controls.mobile-studio .tab-bar .tab {
-    flex: 1;
-    background: transparent;
-    border: none;
-    color: var(--color2);
-    font-size: 11px;
-    text-transform: uppercase;
-    font-weight: bold;
+  #app[mode="studio"] .controls.editor.shown {
+    visibility: visible;
+    transform: none;
+    transition-delay: 0s;
+  }
+
+  cymatics-controls .editor-bar button,
+  #app[mode="studio"] .controls.editor .tool-row button,
+  #app[mode="studio"] .controls.editor .tab-row button {
+    appearance: none;
+    border: 0;
+    padding: 0;
+    background: none;
+    color: inherit;
+    font: inherit;
     cursor: pointer;
-    border-bottom: 2px solid transparent;
-    padding: 0 4px;
+    -webkit-tap-highlight-color: transparent;
   }
 
-  #app[mode="studio"] .controls.mobile-studio .tab-bar .tab.active {
-    color: white;
-    border-bottom-color: var(--color1);
-  }
-
-  #app[mode="studio"] .controls.mobile-studio .tab-content {
-    flex: 1;
-    overflow-y: auto;
-    overflow-x: hidden;
-    padding: 10px 16px;
-  }
-
-  #app[mode="studio"] .controls.mobile-studio .tab-content .group {
-    display: none !important;
-  }
-
-  #app[mode="studio"] .controls.mobile-studio .tab-content .group.active {
-    display: block !important;
-  }
-
-  #app[mode="studio"] .controls.mobile-studio .control {
-    width: 100%;
-    height: unset;
-    min-height: unset;
-    padding: 10px 0;
-  }
-
-  #app[mode="studio"] .controls.mobile-studio .control input[type="range"] {
-    width: 100%;
-  }
-
-  #app[mode="studio"] .controls.mobile-studio .control label {
-    color: var(--color2);
-    font-size: 13px;
+  /* Cancel and Done, over the cog and the fullscreen button. */
+  cymatics-controls .editor-bar {
+    position: fixed;
+    top: 0;
+    right: 0;
+    left: 0;
+    z-index: 201;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: calc(6px + env(safe-area-inset-top)) calc(8px + env(safe-area-inset-right)) 6px calc(8px + env(safe-area-inset-left));
+    background: linear-gradient(rgb(0 0 0 / 60%), transparent);
     pointer-events: none;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity .2s ease-out, visibility 0s linear .2s;
   }
 
-  #app[mode="studio"] .controls.mobile-studio .control img {
-    border: 2px solid #333;
-    max-width: 185px;
-    max-height: 85px;
-    margin-bottom: 10px;
-    border-radius: 6px;
+  cymatics-controls .editor-bar.shown {
+    opacity: 1;
+    visibility: visible;
+    transition-delay: 0s;
   }
 
-  #app[mode="studio"] .controls.mobile-studio .control input[type="file"] {
+  cymatics-controls .editor-bar button {
+    min-width: 44px;
+    height: 44px;
+    padding: 0 16px;
+    border-radius: 22px;
+    background: rgb(20 20 24 / 80%);
+    font-size: 15px;
+    color: #eee;
+    pointer-events: auto;
+  }
+
+  cymatics-controls .editor-bar .editor-done {
+    font-weight: 600;
+    color: var(--editor-accent);
+  }
+
+  body:has(cymatics-controls .editor-bar.shown) #studio-toggle-btn,
+  body:has(cymatics-controls .editor-bar.shown) .simple-fullscreen-btn {
+    visibility: hidden;
+  }
+
+  /* The selected tool. A slider fits in 96px; anything taller (components,
+     the EQ, a slider with Auto's settings open) gets up to 45vh. */
+  #app[mode="studio"] .controls.editor .tool-area {
+    flex: none;
+    box-sizing: border-box;
+    height: 96px;
+    padding: 0 var(--editor-gutter);
+    overflow: hidden auto;
+    overscroll-behavior: contain;
+  }
+
+  #app[mode="studio"] .controls.editor.tall .tool-area {
+    height: auto;
+    max-height: 45vh;
+    max-height: 45dvh;
+  }
+
+  /* Hidden, not removed: other code finds controls by global selectors. */
+  #app[mode="studio"] .controls.editor .tool {
     display: none;
   }
 
-  #app[mode="studio"] .controls.mobile-studio .sticky {
-    display: flex;
-    position: sticky;
-    bottom: 0;
-    left: 0;
-    right: 0;
+  #app[mode="studio"] .controls.editor .tool.selected {
+    display: block;
+  }
+
+  #app[mode="studio"] .controls.editor .control {
     width: 100%;
-    z-index: 9;
-    background: #111;
+    height: auto;
+    min-width: 0;
+    min-height: 0;
+    margin: 0;
+    padding: 4px 0 8px;
+    align-items: stretch;
+    justify-content: flex-start;
+    overflow: visible;
+    background: none;
+    cursor: default;
+  }
+
+  #app[mode="studio"] .controls.editor .tool[data-big] .control {
+    align-items: center;
+  }
+
+  /* A slider: name, Auto, value; then the slider, 44px to grab. */
+  #app[mode="studio"] .controls.editor .tool-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 32px;
+  }
+
+  #app[mode="studio"] .controls.editor .tool-value {
+    margin-left: auto;
+    font-size: 13px;
+    font-variant-numeric: tabular-nums;
+    color: var(--editor-accent);
+  }
+
+  #app[mode="studio"] .controls.editor .tool > .control > input[type="range"] {
+    width: 100%;
+    height: 44px;
+    margin: 0;
+    background: transparent;
+  }
+
+  #app[mode="studio"] .controls.editor .tool > .control > input[type="range"]::-webkit-slider-runnable-track {
+    height: 4px;
+    border-radius: 2px;
+    background: #444;
+  }
+
+  #app[mode="studio"] .controls.editor .tool > .control > input[type="range"]::-webkit-slider-thumb {
+    width: 24px;
+    height: 24px;
+    margin-top: -10px;
+    background: #fff;
+  }
+
+  #app[mode="studio"] .controls.editor .tool > .control > input[type="range"]::-moz-range-track {
+    height: 4px;
+    border-radius: 2px;
+    background: #444;
+  }
+
+  #app[mode="studio"] .controls.editor .tool > .control > input[type="range"]::-moz-range-thumb {
+    width: 24px;
+    height: 24px;
+    border: 0;
+    border-radius: 50%;
+    background: #fff;
+  }
+
+  /* The Dynamic checkbox as an Auto pill: 26px to see, 44px to hit. */
+  #app[mode="studio"] .controls.editor .auto-toggle {
+    position: relative;
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    height: 26px;
+    padding: 0 12px;
+    border: 1px solid #555;
+    border-radius: 13px;
+    font-size: 12px;
+    line-height: 1;
+    color: #aaa;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  #app[mode="studio"] .controls.editor .auto-toggle::after {
+    content: '';
+    position: absolute;
+    inset: -9px -4px;
+  }
+
+  #app[mode="studio"] .controls.editor .auto-toggle input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: 0;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  #app[mode="studio"] .controls.editor .auto-toggle:has(input:checked) {
+    border-color: transparent;
+    background: var(--editor-accent);
+    color: #111;
+  }
+
+  #app[mode="studio"] .controls.editor .auto-toggle:has(input:focus-visible) {
+    outline: 2px solid var(--editor-accent);
+    outline-offset: 2px;
+  }
+
+  /* Components, at the sizes they act on (the lights pad's drag scale is
+     its own width, as in the desktop panel), with 44px targets. */
+  #app[mode="studio"] .controls.editor xy-control {
+    width: 248px;
+    margin: 0 auto;
+    background: none;
+  }
+
+  #app[mode="studio"] .controls.editor xy-control .buttons {
+    width: 44px;
+  }
+
+  #app[mode="studio"] .controls.editor xy-control .buttons button {
+    min-width: 44px;
+  }
+
+  #app[mode="studio"] .controls.editor pole-config .editor ul {
+    width: 240px;
+  }
+
+  #app[mode="studio"] .controls.editor pole-config .editor li {
+    width: 44px;
+    min-width: 44px;
+    height: 44px;
+    min-height: 44px;
+  }
+
+  #app[mode="studio"] .controls.editor pole-config .editor li button {
+    width: 100%;
+    height: 100%;
+  }
+
+  #app[mode="studio"] .controls.editor p-equalizer {
+    margin: 0 auto;
+  }
+
+  #app[mode="studio"] .controls.editor .control:has(> input[type="checkbox"]) {
+    flex-direction: row;
+    justify-content: center;
+    gap: 10px;
+  }
+
+  #app[mode="studio"] .controls.editor .control > input[type="checkbox"] {
+    width: 22px;
+    height: 22px;
+    margin: 0;
+  }
+
+  #app[mode="studio"] .controls.editor .control:has(> input[type="checkbox"]) > label {
+    padding: 12px 0;
+    font-size: 15px;
+    cursor: pointer;
+  }
+
+  #app[mode="studio"] .controls.editor .control > select {
+    min-width: 180px;
+    min-height: 44px;
+    margin-bottom: 6px;
+    padding: 0 12px;
+    border: 1px solid #333;
+    border-radius: 10px;
+    background: #222;
+    color: #eee;
+    font-size: 15px;
+  }
+
+  #app[mode="studio"] .controls.editor .tool select,
+  #app[mode="studio"] .controls.editor .tool button,
+  #app[mode="studio"] .controls.editor .tool input[type="color"] {
+    min-height: 44px;
+  }
+
+  #app[mode="studio"] .controls.editor .tool input[type="color"] {
+    min-width: 44px;
+  }
+
+  /* The tab's tools: 44px round buttons, swiped sideways. */
+  #app[mode="studio"] .controls.editor .tool-row {
+    position: relative;
+    display: flex;
+    gap: 6px;
+    padding: 6px var(--editor-gutter) 4px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scroll-snap-type: x proximity;
+    scroll-padding-inline: var(--editor-gutter);
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  #app[mode="studio"] .controls.editor .tool-row::-webkit-scrollbar,
+  #app[mode="studio"] .controls.editor .tab-row::-webkit-scrollbar {
+    display: none;
+  }
+
+  #app[mode="studio"] .controls.editor .tool-icon {
+    display: flex;
+    flex: none;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    width: 60px;
+    color: #aaa;
+    scroll-snap-align: start;
+  }
+
+  #app[mode="studio"] .controls.editor .tool-glyph {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    width: 44px;
+    height: 44px;
+    border: 1.5px solid #555;
+    border-radius: 50%;
+  }
+
+  #app[mode="studio"] .controls.editor .tool-glyph svg {
+    width: 22px;
+    height: 22px;
+  }
+
+  #app[mode="studio"] .controls.editor .tool-name {
+    display: -webkit-box;
+    width: 100%;
+    overflow: hidden;
+    font-size: 10px;
+    line-height: 1.2;
+    text-align: center;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+
+  #app[mode="studio"] .controls.editor .tool-icon.selected {
+    color: #fff;
+  }
+
+  #app[mode="studio"] .controls.editor .tool-icon.selected .tool-glyph {
+    border-color: var(--editor-accent);
+    color: var(--editor-accent);
+  }
+
+  /* The five tabs. */
+  #app[mode="studio"] .controls.editor .tab-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 0 8px;
+    overflow-x: auto;
+    border-top: 1px solid rgb(255 255 255 / 6%);
+    scrollbar-width: none;
+  }
+
+  #app[mode="studio"] .controls.editor .editor-tab {
+    flex: 1 0 auto;
+    min-width: 44px;
+    height: 44px;
+    padding: 0 8px;
+    font-size: 11px;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: #888;
+  }
+
+  #app[mode="studio"] .controls.editor .editor-tab.selected {
+    color: #fff;
+    text-decoration-line: underline;
+    text-decoration-color: var(--editor-accent);
+    text-decoration-thickness: 1.5px;
+    text-underline-offset: 6px;
+  }
+
+  /* Sideways: the same stack in a column on the right, under Cancel / Done,
+     with the selected tool just above its icons. */
+  @media (orientation: landscape) {
+
+    cymatics-controls .editor-bar {
+      left: auto;
+      box-sizing: border-box;
+      width: calc(300px + env(safe-area-inset-right));
+      padding-left: 8px;
+    }
+
+    #app[mode="studio"] .controls.editor {
+      top: calc(56px + env(safe-area-inset-top));
+      left: auto;
+      box-sizing: border-box;
+      width: calc(300px + env(safe-area-inset-right));
+      padding-right: env(safe-area-inset-right);
+      border-radius: 18px 0 0 18px;
+      transform: translateX(100%);
+    }
+
+    #app[mode="studio"] .controls.editor .tool-area,
+    #app[mode="studio"] .controls.editor.tall .tool-area {
+      display: flex;
+      flex: 1 1 auto;
+      flex-direction: column;
+      height: auto;
+      min-height: 0;
+      max-height: none;
+    }
+
+    #app[mode="studio"] .controls.editor .tool.selected {
+      margin-top: auto;
+    }
+
   }
 
 }

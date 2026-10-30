@@ -3,6 +3,10 @@ import { host } from '../studio/host.js'
 import { defaultPresets } from "../default-presets"
 import { poleConfigs } from "./pole-config.js"
 import { fileToScaledDataUrl } from '../image-util.js'
+import { phoneQuery } from '../studio/layout.js'
+import { phoneStudio } from '../studio/phone-studio.js'
+import { toolId, toolsFor } from '../studio/control-tabs.js'
+import { EQ_TOOL, editorShell, sliderHead, toolButton, toolWrapper } from './phone-editor.js'
 
 const BAND_OPTIONS = [
   { value: 'band1', label: 'Sub-bass (40–80Hz)' },
@@ -86,6 +90,15 @@ function makeSpeedRow(globalKey, defaultVal = 0.8) {
   return makeUnitRow('Speed', globalKey, defaultVal)
 }
 
+// What decides which phone tools are relevant, in the shape isRelevant reads.
+const relevance = () => ({
+  cymatics: engine.state.cymaticsConfig,
+  renderer: engine.state.rendererConfig,
+})
+
+// Changing one of these shows or hides other tools.
+const RELEVANCE_KEYS = new Set(['field_mode', 'liquid_mode', 'liquid_material'])
+
 function matchFormation(poles) {
   if (!poles) return null
   const key = JSON.stringify(poles)
@@ -102,11 +115,20 @@ export class PuhdeCymaticsControls extends HTMLElement {
 		this.visible = 'false'
     this.controls = []
     this.mode = null
-    this._mobileQuery = window.matchMedia('(max-width: 768px)')
+    // The phone editor's selection. render() runs on every preset load, so
+    // these live here rather than in the markup.
+    this.tab = 'motion'
+    this.tool = null
+    this.toolByTab = {}
   }
 
   get isMobileStudio() {
-    return this.mode === 'studio' && this._mobileQuery.matches
+    return this.mode === 'studio' && phoneQuery().matches
+  }
+
+  // Whether the phone editor's selected tool takes the tall area.
+  get tall() {
+    return !!this.querySelector('.controls.editor.tall')
   }
 
   connectedCallback() {
@@ -115,7 +137,7 @@ export class PuhdeCymaticsControls extends HTMLElement {
 		this.render()
     this.initButtons()
     // this.initMidi()
-    this._mobileQuery.addEventListener('change', () => {
+    phoneQuery().addEventListener('change', () => {
       this.render()
       this.initButtons()
     })
@@ -132,28 +154,11 @@ export class PuhdeCymaticsControls extends HTMLElement {
 	}
 
 	render() {
+    // A fresh p-equalizer starts flat, but the filters keep their gains.
+    const eqGains = this.querySelector('p-equalizer')?.gains
     if (this.mode === 'studio') {
       if (this.isMobileStudio) {
-        this.innerHTML = `
-          <div class="controls mobile-studio">
-            <band-meter></band-meter>
-            <div class="tab-bar">
-              <button class="tab" data-tab="audio">Audio</button>
-              <button class="tab active" data-tab="cymatics">Cymatics</button>
-            </div>
-            <div class="tab-content">
-              <div class="group audio">
-                <p-equalizer></p-equalizer>
-              </div>
-              <div class="group cymatics active"></div>
-            </div>
-            <div class="sticky">
-              <button fn="save">Save</button>
-              <button fn="save-as">Save As…</button>
-              ${host().chrome.standalone ? '<button fn="set-default">Set as Default</button>' : ''}
-            </div>
-          </div>
-        `
+        this.renderEditor()
       } else {
         this.innerHTML = `
           <div class="controls">
@@ -196,16 +201,32 @@ export class PuhdeCymaticsControls extends HTMLElement {
       }
     }
 
-    this.controls.map(control => {
-      const target = this.querySelector('.controls .group.' + control.groupSlot)
-      if (!target) return
-      const before = target.children.length
-      renderControl(control, target)
-      // Everything the control added, including a Dynamic panel beneath it.
-      if (control.sourcesOnly) {
-        for (const el of [...target.children].slice(before)) el.dataset.sourcesOnly = ''
-      }
-    })
+    if (this.isMobileStudio) {
+      const area = this.querySelector('.tool-area')
+      this.controls.forEach(control => {
+        // In the document before the control is built: light_distance reads
+        // the lights pad through s().
+        const wrapper = toolWrapper({ id: toolId(control), tab: control.tab, big: !!control.component })
+        area.append(wrapper)
+        renderControl(control, wrapper)
+      })
+      const eq = toolWrapper({ ...EQ_TOOL, big: true })
+      eq.append(document.createElement('p-equalizer'))
+      area.append(eq)
+    } else {
+      this.controls.map(control => {
+        const target = this.querySelector('.controls .group.' + control.groupSlot)
+        if (!target) return
+        const before = target.children.length
+        renderControl(control, target)
+        // Everything the control added, including a Dynamic panel beneath it.
+        if (control.sourcesOnly) {
+          for (const el of [...target.children].slice(before)) el.dataset.sourcesOnly = ''
+        }
+      })
+    }
+
+    if (eqGains) this.querySelector('p-equalizer')?.setGains(eqGains)
 
     if (this.mode === 'player') {
       this.createKnob({
@@ -222,33 +243,104 @@ export class PuhdeCymaticsControls extends HTMLElement {
       }, this.querySelector('.controls .scene-selector'))
     }
 
-    const wrapper = s('.cymatics-wrapper')
-		if (this.visible === 'true') {
-			setTimeout(() => {
-        if (this.isMobileStudio) {
-          this.querySelector('.controls').style.transform = 'translateY(0)'
-          if (wrapper) wrapper.classList.add('controls-open')
-        } else {
-				  this.querySelector('.controls').style.transform = this.mode === 'studio' ? 'translateX(0)' : 'translateY(0)'
-        }
-        this.initButtons()
-			})
-		} else {
-			setTimeout(() => {
-        if (this.isMobileStudio) {
-          this.querySelector('.controls').style.transform = 'translateY(calc(45vh + 48px))'
-          if (wrapper) wrapper.classList.remove('controls-open')
-        } else {
-				  this.querySelector('.controls').style.transform = this.mode === 'studio' ? 'translateX(300px)' : 'translateY(200px)'
-        }
-			})
-		}
+    // On a phone, rebuilt in place as on every preset load: no slide.
+    if (this.isMobileStudio) this.place()
+    else this.slide()
 
-    if (this.isMobileStudio) {
-      this.initTabs()
+    // On a phone this also shows the selected tool (applyFieldMode).
+    this.updateControlsFromEngineState()
+  }
+
+  // The phone editor's frame: Cancel / Done at the top of the screen; at the
+  // bottom the selected tool, its tab's tool icons, and the tabs.
+  renderEditor() {
+    const { bar, panel, area } = editorShell({
+      onCancel: () => phoneStudio().cancel(),
+      onDone: () => phoneStudio().done(),
+      onTab: (tab) => this.selectTab(tab),
+    })
+    // Turning Auto on opens its settings under the slider: the tall area.
+    area.addEventListener('change', (e) => {
+      if (e.target.closest('.auto-toggle')) this.syncEditor()
+    })
+    this.replaceChildren(bar, panel)
+  }
+
+  // The tools the tab shows now, in order.
+  phoneTools(tab) {
+    const tools = toolsFor(tab, this.controls, relevance())
+      .map(c => ({ id: toolId(c), label: c.label, icon: c.icon }))
+    if (tab === EQ_TOOL.tab) tools.push(EQ_TOOL)
+    return tools
+  }
+
+  selectTab(tab) {
+    if (tab === this.tab) return
+    this.tab = tab
+    this.tool = this.toolByTab[tab] ?? null
+    this.syncEditor()
+  }
+
+  selectTool(id) {
+    this.tool = id
+    this.toolByTab[this.tab] = id
+    this.syncEditor()
+  }
+
+  // Shows the selected tool and its tab's icons, leaving out what the current
+  // Field / Liquid / Material make irrelevant. A selected tool that has just
+  // been left out gives way to the tab's first.
+  syncEditor() {
+    const panel = this.querySelector('.controls.editor')
+    if (!panel) return
+    const tools = this.phoneTools(this.tab)
+    if (!tools.some(t => t.id === this.tool)) this.tool = tools[0]?.id ?? null
+
+    let selected = null
+    for (const w of panel.querySelectorAll('.tool-area > .tool')) {
+      const on = w.dataset.tab === this.tab && w.dataset.tool === this.tool
+      w.classList.toggle('selected', on)
+      w.classList.toggle('tall', w.dataset.big != null || !!w.querySelector('.auto-toggle input:checked'))
+      if (on) selected = w
+    }
+    selected?.querySelector('.tool-head')?.paint?.()
+    panel.classList.toggle('tall', !!selected?.classList.contains('tall'))
+
+    // Rebuilt from the tab's current tools; the scroll stays put within a tab.
+    const row = panel.querySelector('.tool-row')
+    const keep = row.dataset.tab === this.tab ? row.scrollLeft : 0
+    row.replaceChildren(...tools.map(t => toolButton(t, t.id === this.tool, (id) => this.selectTool(id))))
+    row.dataset.tab = this.tab
+    row.scrollLeft = keep
+    const pick = row.querySelector('.tool-icon.selected')
+    if (pick && (pick.offsetLeft < row.scrollLeft || pick.offsetLeft + pick.offsetWidth > row.scrollLeft + row.clientWidth)) {
+      row.scrollLeft = pick.offsetLeft - (row.clientWidth - pick.offsetWidth) / 2
     }
 
-    this.updateControlsFromEngineState()
+    for (const b of panel.querySelectorAll('.tab-row .editor-tab')) {
+      const on = b.dataset.tab === this.tab
+      b.classList.toggle('selected', on)
+      b.setAttribute('aria-selected', String(on))
+    }
+
+    // For whoever sizes the plate around the editor (Task 9's show()).
+    const signal = `${this.tab}/${this.tool}/${this.tall}`
+    if (signal !== this.signal) {
+      this.signal = signal
+      this.dispatchEvent(new CustomEvent('toolchange', {
+        bubbles: true,
+        detail: { tab: this.tab, tool: this.tool, tall: this.tall },
+      }))
+    }
+  }
+
+  // In or out on a phone: the CSS slides the editor up (in from the right,
+  // sideways) on .shown, and fades the Cancel / Done bar in with it.
+  place() {
+    const shown = this.visible === 'true'
+    this.querySelector('.controls.editor')?.classList.toggle('shown', shown)
+    this.querySelector('.editor-bar')?.classList.toggle('shown', shown)
+    s('.cymatics-wrapper')?.classList.toggle('controls-open', shown)
   }
 
   updateControlsFromEngineState() {
@@ -272,7 +364,13 @@ export class PuhdeCymaticsControls extends HTMLElement {
   // sources do nothing there. Grey them out rather than leave them silently
   // dead. `inert`, not `disabled`: the Dynamic checkboxes already drive their
   // sliders' `disabled`, and re-enabling would clobber that.
+  // On a phone, tools that do nothing now (control-tabs.js) are left out
+  // instead, Liquid and Material included.
   applyFieldMode() {
+    if (this.isMobileStudio) {
+      this.syncEditor()
+      return
+    }
     const plate = (engine.state.cymaticsConfig.field_mode ?? 0) !== 0
     for (const el of this.querySelectorAll('[data-sources-only]')) {
       el.inert = plate
@@ -406,13 +504,7 @@ export class PuhdeCymaticsControls extends HTMLElement {
         }
         colorPicker.disabled = !engine.state.rendererConfig.lights?.length
         colorPicker.title = colorPicker.disabled ? 'No lights. Add one on the pad above.' : ''
-        const dynamicColorLabel = document.createElement('label')
-        dynamicColorLabel.classList.add('auto-toggle')
-        const dynamicColorCheck = document.createElement('input')
-        dynamicColorCheck.type = 'checkbox'
-        dynamicColorCheck.checked = !!window.__dynamicLightColor
-        dynamicColorLabel.appendChild(dynamicColorCheck)
-        dynamicColorLabel.appendChild(document.createTextNode(' Dynamic'))
+        const { label: dynamicColorLabel, checkbox: dynamicColorCheck } = this.autoToggle(!!window.__dynamicLightColor)
 
         // min/max sub-controls (shown only when Dynamic is on)
         const colorSubControls = document.createElement('div')
@@ -509,10 +601,16 @@ export class PuhdeCymaticsControls extends HTMLElement {
       checkbox.checked = !!checked
       const label = document.createElement('label')
       label.textContent = control.label
+      // On a phone the name is the bigger thing to tap.
+      if (this.isMobileStudio) {
+        checkbox.id = `control-${control.name}`
+        label.htmlFor = checkbox.id
+      }
       wrapper.appendChild(checkbox)
       wrapper.appendChild(label)
       checkbox.addEventListener('click', () => {
         s('p-cymatics').updateControl(control.name, checkbox.checked)
+        if (RELEVANCE_KEYS.has(control.name)) this.applyFieldMode()
       })
       targetContainer.appendChild(wrapper)
     }
@@ -533,7 +631,7 @@ export class PuhdeCymaticsControls extends HTMLElement {
       const select = component.querySelector('select')
       select.onchange = () => {
         s('p-cymatics').updateControl(control.name, parseInt(select.value))
-        if (control.name === 'field_mode') this.applyFieldMode()
+        if (RELEVANCE_KEYS.has(control.name)) this.applyFieldMode()
       }
       targetContainer.appendChild(component)
     }
@@ -650,15 +748,17 @@ export class PuhdeCymaticsControls extends HTMLElement {
 
       // Dynamic toggle for color picker (e.g. line color shifting with audio)
       if (control.autoToggle && control.autoKey) {
-        const autoLabel = document.createElement('label')
-        autoLabel.classList.add('auto-toggle')
-        autoLabel.style.cssText = 'display:flex; align-items:center; gap:4px; font-size:11px; color:#777; margin-top:4px'
-        const autoCheckbox = document.createElement('input')
-        autoCheckbox.type = 'checkbox'
-        autoCheckbox.checked = !!window[control.autoKey]
-        autoLabel.appendChild(autoCheckbox)
-        autoLabel.appendChild(document.createTextNode(' Dynamic'))
-        wrapper.appendChild(autoLabel)
+        const { label: autoLabel, checkbox: autoCheckbox } = this.autoToggle(!!window[control.autoKey])
+        if (this.isMobileStudio) {
+          // The pill sits beside the name, above the picker.
+          const head = document.createElement('div')
+          head.className = 'tool-head'
+          head.append(label, autoLabel)
+          wrapper.prepend(head)
+        } else {
+          autoLabel.style.cssText = 'display:flex; align-items:center; gap:4px; font-size:11px; color:#777; margin-top:4px'
+          wrapper.appendChild(autoLabel)
+        }
 
         const subPickers = document.createElement('div')
         subPickers.style.cssText = 'margin-left:10px; border-left:2px solid #226; padding-left:10px; margin-top:4px; display:none'
@@ -794,14 +894,12 @@ export class PuhdeCymaticsControls extends HTMLElement {
       }
     }
     sliderContainer.appendChild(slider)
+    let autoLabel = null
+    let subControls = null
     if (control.autoToggle) {
-      const autoLabel = document.createElement('label')
-      autoLabel.classList.add('auto-toggle')
-      const autoCheckbox = document.createElement('input')
-      autoCheckbox.type = 'checkbox'
-      autoCheckbox.checked = !!window[control.autoKey]
-      autoLabel.appendChild(autoCheckbox)
-      autoLabel.appendChild(document.createTextNode(' Dynamic'))
+      const auto = this.autoToggle(!!window[control.autoKey])
+      autoLabel = auto.label
+      const autoCheckbox = auto.checkbox
 
       // Sub-controls config per autoKey
       const subControlDefs = {
@@ -852,7 +950,6 @@ export class PuhdeCymaticsControls extends HTMLElement {
         },
       }
 
-      let subControls = null
       const def = subControlDefs[control.autoKey]
       if (def && !def.isColor) {
         subControls = document.createElement('div')
@@ -929,7 +1026,12 @@ export class PuhdeCymaticsControls extends HTMLElement {
           s('p-cymatics').updateControl(control.name, parseFloat(slider.value / 100))
         }
       })
-
+    }
+    if (this.isMobileStudio) {
+      // Name, Auto and value above the slider; Auto's settings under it.
+      sliderContainer.prepend(sliderHead(label, autoLabel, slider, control))
+      if (subControls) sliderContainer.appendChild(subControls)
+    } else if (control.autoToggle) {
       const labelRow = document.createElement('div')
       labelRow.style.cssText = 'display:flex; align-items:center; justify-content:space-between; width:220px'
       labelRow.appendChild(label)
@@ -940,6 +1042,18 @@ export class PuhdeCymaticsControls extends HTMLElement {
       sliderContainer.appendChild(label)
     }
     targetContainer.appendChild(sliderContainer)
+  }
+
+  // The Dynamic checkbox: on a phone, a pill reading Auto (the CSS styles it).
+  autoToggle(checked) {
+    const label = document.createElement('label')
+    label.classList.add('auto-toggle')
+    const checkbox = document.createElement('input')
+    checkbox.type = 'checkbox'
+    checkbox.checked = checked
+    label.appendChild(checkbox)
+    label.appendChild(document.createTextNode(this.isMobileStudio ? 'Auto' : ' Dynamic'))
+    return { label, checkbox }
   }
 
   createKnob(control, targetContainer) {
@@ -964,40 +1078,31 @@ export class PuhdeCymaticsControls extends HTMLElement {
     targetContainer.appendChild(knobContainer)
   }
 
-  initTabs() {
-    this.querySelectorAll('.tab-bar .tab').forEach(tab => {
-      tab.addEventListener('click', () => {
-        this.querySelectorAll('.tab-bar .tab').forEach(t => t.classList.remove('active'))
-        this.querySelectorAll('.tab-content .group').forEach(g => g.classList.remove('active'))
-        tab.classList.add('active')
-        const group = this.querySelector(`.tab-content .group.${tab.dataset.tab}`)
-        if (group) group.classList.add('active')
-      })
-    })
+  toggle() {
+    if (this.isMobileStudio) {
+      // Values may have moved while it was away (Cancel restores them).
+      if (this.visible === 'true') this.syncEditor()
+      this.place()
+      return
+    }
+    this.slide()
   }
 
-  toggle() {
-    const wrapper = s('.cymatics-wrapper')
-		if (this.visible === 'true') {
-			setTimeout(() => {
-        if (this.isMobileStudio) {
-          this.querySelector('.controls').style.transform = 'translateY(0)'
-          if (wrapper) wrapper.classList.add('controls-open')
-        } else {
-				  this.querySelector('.controls').style.transform = this.mode === 'studio' ? 'translateX(0)' : 'translateY(0)'
-        }
+  // Off a phone: in from the right in the studio, up from the bottom in the
+  // player. Read when it fires; it leaves the phone editor to its CSS, as an
+  // inline transform would pin it.
+  slide() {
+    setTimeout(() => {
+      const panel = this.querySelector('.controls')
+      if (!panel || panel.classList.contains('editor')) return
+      const studio = this.mode === 'studio'
+      if (this.visible === 'true') {
+        panel.style.transform = studio ? 'translateX(0)' : 'translateY(0)'
         this.initButtons()
-			})
-		} else {
-			setTimeout(() => {
-        if (this.isMobileStudio) {
-          this.querySelector('.controls').style.transform = 'translateY(calc(45vh + 48px))'
-          if (wrapper) wrapper.classList.remove('controls-open')
-        } else {
-				  this.querySelector('.controls').style.transform = this.mode === 'studio' ? 'translateX(300px)' : 'translateY(200px)'
-        }
-			})
-		}
+      } else {
+        panel.style.transform = studio ? 'translateX(300px)' : 'translateY(200px)'
+      }
+    })
   }
 
   initButtons() {

@@ -110,8 +110,10 @@ export class PuhdeEqualizer extends HTMLElement {
     this.remove()
   }
 
+  // The filters only exist once audio has started; the band's value is kept
+  // either way, so the panel (and an edit snapshot) can be ahead of them.
   updateBand({ filter, param, frequency, value }) {
-    window[filter][param].value = parseFloat(value)
+    if (window[filter]) window[filter][param].value = parseFloat(value)
     let newBands = JSON.parse(JSON.stringify(this.equalizer))
     newBands.find((band) => band.frequency === frequency).value = parseFloat(value)
     this.equalizer = newBands
