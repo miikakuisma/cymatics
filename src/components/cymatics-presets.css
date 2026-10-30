@@ -148,3 +148,260 @@ cymatics-presets .preset-action button { width: 100%; }
 .presets ul li button[fn="rename"]:hover { color: white; }
 .presets ul li button[fn="delete"] { color: #888; font-size: 18px; line-height: 1; }
 .presets ul li button[fn="delete"]:hover { color: #ff6b6b; }
+
+/* ── Phone: the picker sheet ──────────────────────────────────────────────
+   cymatics-presets renders .presets.sheet only on a phone. The query is
+   PHONE_QUERY (src/studio/layout.js), copied verbatim. The sheet sits above
+   the 48px p-nav and the home indicator; .shown slides it in. */
+@media (max-width: 768px), (pointer: coarse) and (max-height: 500px) {
+
+  #app .presets.sheet {
+    --sheet-bottom: calc(48px + env(safe-area-inset-bottom));
+    --sheet-gutter: 14px;
+    --sheet-accent: #8fa6ff;
+    top: auto;
+    right: 0;
+    bottom: var(--sheet-bottom);
+    left: 0;
+    z-index: 3;
+    display: block;
+    width: auto;
+    height: auto;
+    max-height: 40vh;
+    max-height: 40dvh;
+    padding: 6px 0 12px;
+    overflow: hidden auto;
+    overscroll-behavior: contain;
+    scroll-snap-type: none;
+    background: rgb(20 20 24 / 92%);
+    -webkit-backdrop-filter: blur(24px);
+    backdrop-filter: blur(24px);
+    border-radius: 18px 18px 0 0;
+    color: #eee;
+    visibility: hidden;
+    transform: translateY(calc(100% + var(--sheet-bottom)));
+    transition: transform .3s ease-out, visibility 0s linear .3s;
+  }
+
+  #app .presets.sheet.shown {
+    visibility: visible;
+    transform: none;
+    transition-delay: 0s;
+  }
+
+  .presets.sheet button {
+    appearance: none;
+    border: 0;
+    padding: 0;
+    background: none;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Header: the open preset's name, and its ⋯ menu. */
+  .presets.sheet .sheet-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 0 4px 0 var(--sheet-gutter);
+  }
+
+  .presets.sheet .sheet-title {
+    overflow: hidden;
+    font-size: 14px;
+    font-weight: 600;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  .presets.sheet .sheet-more {
+    flex: none;
+    width: 44px;
+    height: 44px;
+    font-size: 20px;
+    color: var(--color2);
+  }
+
+  .presets.sheet .sheet-label {
+    margin: 2px 0 6px;
+    padding: 0 var(--sheet-gutter);
+    font-size: 10px;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    opacity: .5;
+  }
+
+  /* Rows: swiped sideways with momentum, without dragging the page along. */
+  .presets.sheet .sheet-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 8px;
+    padding: 0 var(--sheet-gutter);
+    overflow-x: auto;
+    overflow-y: hidden;
+    scroll-snap-type: x proximity;
+    scroll-padding-inline: var(--sheet-gutter);
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .presets.sheet .sheet-row::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Tiles: a 56px thumbnail over its name. The current one is outlined. */
+  .presets.sheet .tile {
+    position: relative;
+    flex: none;
+    width: 64px;
+    scroll-snap-align: start;
+  }
+
+  .presets.sheet .tile-pick {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    width: 100%;
+    padding-top: 2px;
+  }
+
+  .presets.sheet .tile-thumb {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    width: 60px;
+    height: 60px;
+    overflow: hidden;
+    background: #1a1a1f;
+    border: 2px solid transparent;
+    border-radius: 12px;
+    font-size: 22px;
+    color: #888;
+  }
+
+  .presets.sheet .tile.current .tile-thumb {
+    border-color: var(--sheet-accent);
+  }
+
+  .presets.sheet .tile-thumb img {
+    display: block;
+    width: 56px;
+    height: 56px;
+    object-fit: cover;
+  }
+
+  /* No src yet: the dark tile shows through. */
+  .presets.sheet .tile-thumb img:not([src]) {
+    visibility: hidden;
+  }
+
+  .presets.sheet .tile-name {
+    width: 100%;
+    overflow: hidden;
+    font-size: 11px;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    text-align: center;
+    color: #ccc;
+  }
+
+  .presets.sheet .tile.current .tile-name {
+    color: #fff;
+  }
+
+  /* The selected own tile's ⋯: small to see, 44px to hit. */
+  .presets.sheet .tile-more {
+    position: absolute;
+    top: -2px;
+    right: -2px;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: rgb(0 0 0 / 70%);
+    font-size: 14px;
+    line-height: 24px;
+    color: #fff;
+  }
+
+  .presets.sheet .tile-more::after {
+    content: '';
+    position: absolute;
+    inset: -10px;
+  }
+
+  .presets.sheet .sheet-adjust {
+    display: block;
+    width: calc(100% - 2 * var(--sheet-gutter));
+    height: 44px;
+    margin: 4px var(--sheet-gutter) 0;
+    border-radius: 10px;
+    background: #2b2f55;
+    font-size: 14px;
+  }
+
+  /* A note takes a line under Adjust only while it has something to say. */
+  .presets.sheet .preset-note {
+    min-height: 0;
+    margin: 8px var(--sheet-gutter) 0;
+    text-align: center;
+  }
+
+  .presets.sheet .preset-note:empty {
+    display: none;
+  }
+
+  /* Menus: small popovers, placed by presets-sheet.js. */
+  cymatics-presets .sheet-menu {
+    position: fixed;
+    z-index: 4;
+    display: flex;
+    flex-direction: column;
+    min-width: 168px;
+    padding: 4px;
+    background: #24242b;
+    border-radius: 12px;
+    box-shadow: 0 8px 24px rgb(0 0 0 / 50%);
+  }
+
+  cymatics-presets .sheet-menu button {
+    appearance: none;
+    min-height: 44px;
+    padding: 0 14px;
+    border: 0;
+    border-radius: 8px;
+    background: none;
+    color: #eee;
+    font: inherit;
+    font-size: 14px;
+    text-align: left;
+    cursor: pointer;
+  }
+
+  cymatics-presets .sheet-menu button:disabled {
+    opacity: .35;
+    cursor: default;
+  }
+
+  /* Sideways: a column on the right, the full height above the nav. */
+  @media (orientation: landscape) {
+
+    #app .presets.sheet {
+      top: env(safe-area-inset-top);
+      left: auto;
+      width: calc(300px + env(safe-area-inset-right));
+      max-height: none;
+      padding-right: env(safe-area-inset-right);
+      box-sizing: border-box;
+      border-radius: 18px 0 0 18px;
+      transform: translateX(100%);
+    }
+
+  }
+
+}

@@ -215,7 +215,6 @@ export class PuhdeCymaticsPresets extends HTMLElement {
 			return t.tile
 		})
 		const add = tile({ name: 'Save', glyph: '＋', onPick: () => this.saveAs() }).tile
-		add.classList.add('add')
 
 		const adjust = document.createElement('button')
 		adjust.type = 'button'

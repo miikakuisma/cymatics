@@ -1019,15 +1019,7 @@ export class PuhdeCymaticsControls extends HTMLElement {
           s('cymatics-presets').saveAs()
         }
         if (fn === 'set-default') {
-          const preset = {
-            poleMode: s('pole-config').selected,
-            renderer: engine.state.rendererConfig,
-            cymatics: engine.state.cymaticsConfig,
-            liquid: engine.state.liquidConfig,
-          }
-          localStorage.setItem('cymatics_default_preset', JSON.stringify(preset))
-          button.textContent = 'Default Saved!'
-          setTimeout(() => { button.textContent = 'Set as Default' }, 2000)
+          s('cymatics-presets').setAsDefault(button)
         }
       }
     })

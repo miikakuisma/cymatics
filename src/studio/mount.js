@@ -32,6 +32,9 @@ import { fileToScaledDataUrl, isImageFile } from '../image-util.js'
 import { DEFAULT_LOOK, lookPreset } from '../element/looks.js'
 import { host, setHost } from './host.js'
 import { overDefaults, setEngineDefaults } from './look-config.js'
+import { phoneQuery } from './layout.js'
+import { initPhoneStudio } from './phone-studio.js'
+import { captureStudio, restoreStudio } from './studio-snapshot.js'
 
 const ABOUT = `
   <div class="about modal">
@@ -42,6 +45,14 @@ const ABOUT = `
     </div>
   </div>
 `
+
+// What each phone phase puts on screen. The picker is cymatics-presets as a
+// sheet; studio-active is what lets it show at all.
+function show(phase) {
+  const picker = phoneQuery().matches && phase === 'picker'
+  document.body.classList.toggle('studio-active', picker)
+  s('cymatics-presets').setAttribute('visible', picker ? 'true' : 'false')
+}
 
 const launchApp = () => {
   const app = s('#app')
@@ -104,6 +115,8 @@ const launchApp = () => {
 
   const puhdeNav = document.createElement('p-nav')
   app.appendChild(puhdeNav)
+
+  initPhoneStudio({ capture: captureStudio, restore: restoreStudio, show })
 
   // Cog button (always visible in top-left corner)
   const cogBtn = document.createElement('button')
