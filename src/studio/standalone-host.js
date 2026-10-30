@@ -40,7 +40,7 @@ export function standaloneHost({ store = indexedDbStore, newId } = {}) {
 				await store.remove(id)
 			},
 		},
-		sources: { list: ['file', 'mic', 'radio'], external: null },
+		sources: { list: ['file', 'mic', 'radio', 'tone'], external: null },
 		chrome: { standalone: true },
 		actions: [],
 	}

@@ -45,7 +45,7 @@ square wave field across the whole canvas, so a 16:9 canvas would stretch the pa
 mounted by `mountStudio(root, host)`. The desktop's Cymatics app hosts it.
 
 `host` (`src/studio/host.js`) is three seams: `presets` (list/read/save/rename/remove;
-standalone: IndexedDB through `storage.js`), `sources` (`file`, `mic`, `radio`, or `music`
+standalone: IndexedDB through `storage.js`), `sources` (`file`, `mic`, `radio`, `tone`, or `music`
 with an `external.subscribe(onFrame)`), `chrome.standalone` (the about modal, the simple
 UI, Set as Default), plus `actions` for the presets panel. `?host=fake` on the dev server
 runs a hosted studio on a synthetic spectrum.
@@ -162,6 +162,11 @@ figures), from `src/engine-js/modes.js`. On a plate, Distance (`view_scale`) is
 the plate's size and so its level of detail, contour mode draws only nodal
 lines, and Freq Detail, Contour Detail and Formation do nothing — the studio
 greys them out (`sourcesOnly` in `controls.js`). Details in the engine README.
+
+The **Tone Generator** source (`tone`, `p-audio.js`) plays one oscillator — sine,
+square, triangle or saw, 20 Hz–10 kHz on a logarithmic slider — for finding
+what a single frequency does to a plate. It is heard at 0.15 gain; the analyser
+still gets it at full level.
 
 ### Render paths
 

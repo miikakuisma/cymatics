@@ -5,7 +5,7 @@ import { standaloneHost } from '../src/studio/standalone-host.js'
 
 test('a host with nothing gets safe defaults', () => {
 	const h = normalizeHost({})
-	assert.deepEqual(h.sources.list, ['file', 'mic', 'radio'])
+	assert.deepEqual(h.sources.list, ['file', 'mic', 'radio', 'tone'])
 	assert.equal(h.sources.external, null)
 	assert.equal(h.chrome.standalone, true)
 	assert.deepEqual(h.actions, [])

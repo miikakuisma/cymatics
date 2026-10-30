@@ -3,7 +3,7 @@
 // standalone app (src/index.js) passes standaloneHost(); the desktop passes its
 // own. Components read it with host().
 
-const SOURCES = ['file', 'mic', 'radio', 'music']
+const SOURCES = ['file', 'mic', 'radio', 'tone', 'music']
 const none = () => Promise.reject(Object.assign(new Error('No presets here.'), { code: 'unavailable' }))
 
 export function normalizeHost(raw = {}) {
@@ -11,7 +11,7 @@ export function normalizeHost(raw = {}) {
 	const external = raw.sources?.external && typeof raw.sources.external.subscribe === 'function'
 		? { label: String(raw.sources.external.label || 'External'), subscribe: raw.sources.external.subscribe }
 		: null
-	const list = (raw.sources?.list || ['file', 'mic', 'radio'])
+	const list = (raw.sources?.list || ['file', 'mic', 'radio', 'tone'])
 		.filter((name) => SOURCES.includes(name) && (name !== 'music' || external))
 	return {
 		presets: {

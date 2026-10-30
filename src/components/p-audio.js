@@ -122,6 +122,16 @@ const defaultStations = [
   { name: 'Radio Ibiza', url: 'https://ice07.fluidstream.net/Ibiza.mp3' },
 ]
 
+// Tone generator range and level. 20 Hz – 10 kHz covers every plate mode the
+// figures can show; the slider maps it logarithmically.
+const TONE_MIN_HZ = 20
+const TONE_MAX_HZ = 10000
+const TONE_STEPS = 1000
+const TONE_VOLUME = 0.15
+const toneToStep = (hz) => Math.round(TONE_STEPS * Math.log(hz / TONE_MIN_HZ) / Math.log(TONE_MAX_HZ / TONE_MIN_HZ))
+const stepToTone = (step) => Math.round(TONE_MIN_HZ * Math.pow(TONE_MAX_HZ / TONE_MIN_HZ, step / TONE_STEPS))
+const formatHz = (hz) => hz >= 1000 ? `${(hz / 1000).toFixed(2)} kHz` : `${hz} Hz`
+
 function getPlayBtn() {
   return document.querySelector('p-nav button[fn="play"]') || document.querySelector('.simple-play-btn')
 }
@@ -155,6 +165,8 @@ export class PuhdeAudio extends HTMLElement {
     this.analyser = null
     this.micStream = null
     this.oscillatorNode = null
+    this.oscFreq = 440            // the tone generator's last settings, kept
+    this.oscType = 'sine'         // between plays
     this.beatGrid = null          // array of beat timestamps in seconds
     this.playbackStartTime = 0    // audioContext.currentTime when .start() called
     this.streamTurn = null        // AbortController for the running stream copy
@@ -206,15 +218,19 @@ export class PuhdeAudio extends HTMLElement {
 
   // --- Render ---
 
+  // The tone generator: one oscillator, for finding what a single frequency
+  // does to the plate. The slider is logarithmic, as pitch is heard — linear,
+  // everything below 1 kHz would sit in its first twentieth.
   renderOscillatorOverlay() {
-    const freq = this.oscillatorNode ? Math.round(this.oscillatorNode.frequency.value) : 440
-    const type = this.oscillatorNode ? this.oscillatorNode.type : 'sine'
+    const freq = this.oscFreq
+    const type = this.oscType
+    const waves = [['sine', 'sine'], ['square', 'square'], ['triangle', 'triangle'], ['sawtooth', 'saw']]
     this.innerHTML = `
       <div class="osc-overlay">
-        <div class="osc-freq"><input type="range" min="1" max="20000" value="${freq}" step="1" /><span class="osc-freq-label">${freq} Hz</span></div>
+        <div class="osc-freq"><input type="range" min="0" max="${TONE_STEPS}" value="${toneToStep(freq)}" step="1" aria-label="Frequency" /><span class="osc-freq-label">${formatHz(freq)}</span></div>
         <div class="osc-waveform">
-          ${['sine', 'square', 'triangle', 'sawtooth'].map(t =>
-            `<button class="osc-type${t === type ? ' active' : ''}" data-type="${t}">${t}</button>`
+          ${waves.map(([t, label]) =>
+            `<button class="osc-type${t === type ? ' active' : ''}" data-type="${t}">${label}</button>`
           ).join('')}
         </div>
         <button class="osc-stop">Stop</button>
@@ -223,9 +239,9 @@ export class PuhdeAudio extends HTMLElement {
     const freqSlider = this.querySelector('.osc-freq input')
     const freqLabel = this.querySelector('.osc-freq-label')
     freqSlider.addEventListener('input', (e) => {
-      const v = parseFloat(e.target.value)
+      const v = stepToTone(parseFloat(e.target.value))
       this.setOscillatorFrequency(v)
-      freqLabel.textContent = `${v} Hz`
+      freqLabel.textContent = formatHz(v)
     })
     this.querySelectorAll('.osc-type').forEach(btn => {
       btn.addEventListener('click', () => {
@@ -235,14 +251,9 @@ export class PuhdeAudio extends HTMLElement {
       })
     })
     this.querySelector('.osc-stop').addEventListener('click', () => {
-      if (this.oscillatorNode) { this.oscillatorNode.stop(); this.oscillatorNode = null }
+      this.stopCurrentAudio()
       const pb = getPlayBtn()
       if (pb) pb.innerHTML = icons.play
-      this.playing = false
-      setPlayingState(false)
-      this.mode = ''
-      this.sendSilence()
-      this.innerHTML = ''
     })
   }
 
@@ -259,8 +270,8 @@ export class PuhdeAudio extends HTMLElement {
       if (offered.includes('music')) html += `<button fn="external">${host().sources.external.label}</button>`
       if (offered.includes('file')) html += `<button fn="file">Play File</button>`
       if (offered.includes('mic')) html += `<button fn="mic">Microphone</button>`
+      if (offered.includes('tone')) html += `<button fn="oscillator">Tone Generator</button>`
       if (offered.includes('radio')) {
-      // html += `<button fn="oscillator">Waveform Generator</button>`
 
       // Favorites
       if (favorites.length > 0) {
@@ -298,11 +309,11 @@ export class PuhdeAudio extends HTMLElement {
         this.playMicrophone()
         this.setAttribute('open', 'false')
       })
-      // this.querySelector('button[fn="oscillator"]').addEventListener('click', () => {
-      //   this.setAttribute('open', 'false')
-      //   this.playOscillator()
-      //   this.renderOscillatorOverlay()
-      // })
+      this.querySelector('button[fn="oscillator"]')?.addEventListener('click', () => {
+        this.setAttribute('open', 'false')
+        this.playOscillator()
+        this.renderOscillatorOverlay()
+      })
       this.querySelectorAll('button[fn="stream"]').forEach(b => b.addEventListener('click', (e) => {
         if (e.target.classList.contains('fav-remove') || e.target.classList.contains('fav-add')) return
         this.setAttribute('open', 'false')
@@ -446,6 +457,8 @@ export class PuhdeAudio extends HTMLElement {
         try { this.oscillatorNode.stop() } catch {}
         this.oscillatorNode = null
       }
+      // The overlay goes with the tone, however it was stopped.
+      this.innerHTML = ''
     }
     if (this.context) {
       this.context.close()
@@ -940,7 +953,7 @@ export class PuhdeAudio extends HTMLElement {
     })
   }
 
-  async playOscillator(freq = 440, waveType = 'sine') {
+  async playOscillator(freq = this.oscFreq, waveType = this.oscType) {
     this.stopCurrentAudio()
     this.mode = 'oscillator'
     this.context = new AudioCtx()
@@ -959,12 +972,16 @@ export class PuhdeAudio extends HTMLElement {
   }
 
   setOscillatorFrequency(value) {
+    this.oscFreq = value
     if (this.oscillatorNode) {
-      this.oscillatorNode.frequency.setValueAtTime(value, this.context.currentTime)
+      // A short glide rather than a jump: stepping the frequency mid-cycle
+      // clicks, and dragging the slider steps it every frame.
+      this.oscillatorNode.frequency.setTargetAtTime(value, this.context.currentTime, 0.015)
     }
   }
 
   setOscillatorType(type) {
+    this.oscType = type
     if (this.oscillatorNode) {
       this.oscillatorNode.type = type
     }
@@ -1133,10 +1150,16 @@ export class PuhdeAudio extends HTMLElement {
     if (this.audioSource) this.audioSource.disconnect()
     if (this.eqInputNode) this.eqInputNode.disconnect()
 
-    // Path 1: clean audio to speakers (skip for mic and oscillator to avoid echo/unwanted sound)
+    // Path 1: clean audio to speakers (skip for mic to avoid echo). The tone is
+    // heard, but quietly and faded in: a full-scale square wave is harsh, and
+    // the analyser below still gets it at full level.
     this.cleanOutputNode = audioContext.createGain()
     this.cleanOutputNode.gain.setValueAtTime(1, audioContext.currentTime)
-    if (this.mode !== 'mic' && this.mode !== 'oscillator') {
+    if (this.mode === 'oscillator') {
+      this.cleanOutputNode.gain.setValueAtTime(0, audioContext.currentTime)
+      this.cleanOutputNode.gain.linearRampToValueAtTime(TONE_VOLUME, audioContext.currentTime + 0.05)
+    }
+    if (this.mode !== 'mic') {
       this.audioSource.connect(this.cleanOutputNode)
       this.cleanOutputNode.connect(audioContext.destination)
     }
