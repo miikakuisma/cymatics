@@ -6,8 +6,8 @@ import { fileToScaledDataUrl } from '../image-util.js'
 import { phoneQuery } from '../studio/layout.js'
 import { phoneStudio } from '../studio/phone-studio.js'
 import { onSwipeDown } from '../studio/swipe.js'
-import { toolId, toolsFor } from '../studio/control-tabs.js'
-import { EQ_TOOL, editorShell, sliderHead, toolButton, toolWrapper } from './phone-editor.js'
+import { irrelevantReason, toolId, toolsFor } from '../studio/control-tabs.js'
+import { EQ_TOOL, METER_TOOL, deskShell, editorShell, sliderHead, toolButton, toolWrapper } from './phone-editor.js'
 
 const BAND_OPTIONS = [
   { value: 'band1', label: 'Sub-bass (40–80Hz)' },
@@ -127,6 +127,12 @@ export class PuhdeCymaticsControls extends HTMLElement {
     return this.mode === 'studio' && phoneQuery().matches
   }
 
+  // The studio, on either layout, lays its controls out by tab (control-tabs.js)
+  // and draws each with its name, Auto pill and value over it.
+  get tabbed() {
+    return this.mode === 'studio'
+  }
+
   // Whether the phone editor's selected tool takes the tall area.
   get tall() {
     return !!this.querySelector('.controls.editor.tall')
@@ -136,12 +142,8 @@ export class PuhdeCymaticsControls extends HTMLElement {
     this.mode = s('#app').getAttribute('mode')
     this.controls = this.mode === 'studio' ? controls : playerKnobs
 		this.render()
-    this.initButtons()
     // this.initMidi()
-    phoneQuery().addEventListener('change', () => {
-      this.render()
-      this.initButtons()
-    })
+    phoneQuery().addEventListener('change', () => this.render())
     // Swiping the tab row down closes the editor, keeping the edits.
     onSwipeDown(this, '.controls.editor .tab-row', () => phoneStudio().close())
   }
@@ -160,29 +162,8 @@ export class PuhdeCymaticsControls extends HTMLElement {
     // A fresh p-equalizer starts flat, but the filters keep their gains.
     const eqGains = this.querySelector('p-equalizer')?.gains
     if (this.mode === 'studio') {
-      if (this.isMobileStudio) {
-        this.renderEditor()
-      } else {
-        this.innerHTML = `
-          <div class="controls">
-            <band-meter></band-meter>
-            <details>
-              <summary>Audio Source</summary>
-              <div class="group audio"></div>
-              <p-equalizer></p-equalizer>
-            </details>
-            <details open>
-              <summary>Cymatics</summary>
-              <div class="group cymatics"></div>
-            </details>
-            <div class="sticky">
-              <button fn="save">Save</button>
-              <button fn="save-as">Save As…</button>
-              ${host().chrome.standalone ? '<button fn="set-default">Set as Default</button>' : ''}
-            </div>
-          </div>
-        `
-      }
+      if (this.isMobileStudio) this.renderEditor()
+      else this.renderDesk()
     } else if (this.mode === 'player') {
       this.innerHTML = `
         <div class="controls">
@@ -204,8 +185,16 @@ export class PuhdeCymaticsControls extends HTMLElement {
       }
     }
 
-    if (this.isMobileStudio) {
-      const area = this.querySelector('.tool-area')
+    if (this.tabbed) {
+      // Every control, each in its tool wrapper, all in the document at once:
+      // other code finds them by global selectors. The phone shows one, the
+      // desktop a tab's worth. The desktop's Audio tab opens on the band meter.
+      const area = this.querySelector(this.isMobileStudio ? '.tool-area' : '.desk-tools')
+      if (!this.isMobileStudio) {
+        const meter = toolWrapper(METER_TOOL)
+        meter.append(document.createElement('band-meter'))
+        area.append(meter)
+      }
       this.controls.forEach(control => {
         // In the document before the control is built: light_distance reads
         // the lights pad through s().
@@ -219,13 +208,7 @@ export class PuhdeCymaticsControls extends HTMLElement {
     } else {
       this.controls.map(control => {
         const target = this.querySelector('.controls .group.' + control.groupSlot)
-        if (!target) return
-        const before = target.children.length
-        renderControl(control, target)
-        // Everything the control added, including a Dynamic panel beneath it.
-        if (control.sourcesOnly) {
-          for (const el of [...target.children].slice(before)) el.dataset.sourcesOnly = ''
-        }
+        if (target) renderControl(control, target)
       })
     }
 
@@ -246,12 +229,53 @@ export class PuhdeCymaticsControls extends HTMLElement {
       }, this.querySelector('.controls .scene-selector'))
     }
 
-    // On a phone, rebuilt in place as on every preset load: no slide.
+    // In the studio, rebuilt in place as on every preset load: no slide. (On
+    // desktop the studio panel around it slides, studio-panel.css.)
     if (this.isMobileStudio) this.place()
-    else this.slide()
+    else if (!this.tabbed) this.slide()
 
-    // On a phone this also shows the selected tool (applyFieldMode).
+    // In the studio this also shows the selected tab or tool (applyFieldMode).
     this.updateControlsFromEngineState()
+  }
+
+  // The desktop panel's lower part: the five tabs, all of the selected tab's
+  // controls, and Save / Save As… / Set as Default (standalone only).
+  renderDesk() {
+    const presets = () => s('cymatics-presets')
+    const { panel } = deskShell({
+      onTab: (tab) => this.selectTab(tab),
+      onSave: () => presets().save(),
+      onSaveAs: () => presets().saveAs(),
+      onSetDefault: host().chrome.standalone ? (button) => presets().setAsDefault(button) : null,
+    })
+    this.replaceChildren(panel)
+  }
+
+  // Shows the selected tab's controls, greying (not hiding) the ones that do
+  // nothing in the current state, with the reason as their title. `inert`
+  // goes on the control, not its wrapper, so the title still shows on hover;
+  // `inert`, not `disabled`, as the Auto pills drive their sliders' disabled.
+  syncDesk() {
+    const panel = this.querySelector('.controls.desk')
+    if (!panel) return
+    const state = relevance()
+    const byId = new Map(this.controls.map(c => [toolId(c), c]))
+    for (const w of panel.querySelectorAll('.desk-tools > .tool')) {
+      const on = w.dataset.tab === this.tab
+      w.classList.toggle('selected', on)
+      const control = byId.get(w.dataset.tool)
+      const reason = control ? irrelevantReason(control, state) : null
+      w.classList.toggle('irrelevant', !!reason)
+      if (reason) w.title = reason
+      else w.removeAttribute('title')
+      for (const child of w.children) child.inert = !!reason
+      if (on) for (const head of w.querySelectorAll('.tool-head')) head.paint?.()
+    }
+    for (const b of panel.querySelectorAll('.desk-tabs .desk-tab')) {
+      const on = b.dataset.tab === this.tab
+      b.classList.toggle('selected', on)
+      b.setAttribute('aria-selected', String(on))
+    }
   }
 
   // The phone editor's frame: Cancel / Done at the top of the screen; at the
@@ -277,11 +301,13 @@ export class PuhdeCymaticsControls extends HTMLElement {
     return tools
   }
 
+  // The tab is the same one on both layouts for the session.
   selectTab(tab) {
     if (tab === this.tab) return
     this.tab = tab
     this.tool = this.toolByTab[tab] ?? null
-    this.syncEditor()
+    if (this.isMobileStudio) this.syncEditor()
+    else this.syncDesk()
   }
 
   selectTool(id) {
@@ -362,23 +388,13 @@ export class PuhdeCymaticsControls extends HTMLElement {
     // })
   }
 
-  // A plate field rings its own modes, so the controls that shape the radiating
-  // sources do nothing there. Grey them out rather than leave them silently
-  // dead. `inert`, not `disabled`: the Dynamic checkboxes already drive their
-  // sliders' `disabled`, and re-enabling would clobber that.
-  // On a phone, tools that do nothing now (control-tabs.js) are left out
-  // instead, Liquid and Material included.
+  // Field, Liquid and Material decide which controls do anything
+  // (control-tabs.js): a plate rings its own modes, so the controls that shape
+  // the radiating sources do nothing there, and so on. On a phone those are
+  // left out of the editor; on desktop they are greyed.
   applyFieldMode() {
-    if (this.isMobileStudio) {
-      this.syncEditor()
-      return
-    }
-    const plate = (engine.state.cymaticsConfig.field_mode ?? 0) !== 0
-    for (const el of this.querySelectorAll('[data-sources-only]')) {
-      el.inert = plate
-      el.style.opacity = plate ? '0.35' : ''
-      el.title = plate ? 'Not used by plate fields' : ''
-    }
+    if (this.isMobileStudio) this.syncEditor()
+    else this.syncDesk()
   }
 
   createComponent(control, targetContainer) {
@@ -573,9 +589,17 @@ export class PuhdeCymaticsControls extends HTMLElement {
         colorSubControls.style.display = window.__dynamicLightColor ? 'block' : 'none'
         colorPicker.disabled = !!window.__dynamicLightColor
 
-        colorRow.appendChild(colorLabel)
-        colorRow.appendChild(colorPicker)
-        colorRow.appendChild(dynamicColorLabel)
+        if (this.tabbed && !this.isMobileStudio) {
+          // On desktop: name, Auto, then the swatch at the row's end, as Line
+          // Color has it.
+          colorRow.className = 'tool-head'
+          colorRow.style.cssText = ''
+          colorRow.append(colorLabel, dynamicColorLabel, colorPicker)
+        } else {
+          colorRow.appendChild(colorLabel)
+          colorRow.appendChild(colorPicker)
+          colorRow.appendChild(dynamicColorLabel)
+        }
         colorControl.appendChild(colorRow)
         colorControl.appendChild(colorSubControls)
         targetContainer.appendChild(colorControl)
@@ -605,7 +629,7 @@ export class PuhdeCymaticsControls extends HTMLElement {
       const label = document.createElement('label')
       label.textContent = control.label
       // On a phone the name is the bigger thing to tap.
-      if (this.isMobileStudio) {
+      if (this.tabbed) {
         checkbox.id = `control-${control.name}`
         label.htmlFor = checkbox.id
       }
@@ -752,7 +776,7 @@ export class PuhdeCymaticsControls extends HTMLElement {
       // Dynamic toggle for color picker (e.g. line color shifting with audio)
       if (control.autoToggle && control.autoKey) {
         const { label: autoLabel, checkbox: autoCheckbox } = this.autoToggle(!!window[control.autoKey])
-        if (this.isMobileStudio) {
+        if (this.tabbed) {
           // The pill sits beside the name, above the picker.
           const head = document.createElement('div')
           head.className = 'tool-head'
@@ -807,6 +831,19 @@ export class PuhdeCymaticsControls extends HTMLElement {
           input.disabled = autoCheckbox.checked
           subPickers.style.display = autoCheckbox.checked ? 'block' : 'none'
         })
+      }
+
+      // On desktop the swatch joins the name's row, at its end, as a
+      // slider's value does.
+      if (this.tabbed && !this.isMobileStudio) {
+        let head = wrapper.querySelector(':scope > .tool-head')
+        if (!head) {
+          head = document.createElement('div')
+          head.className = 'tool-head'
+          head.append(label)
+          wrapper.prepend(head)
+        }
+        head.append(input)
       }
 
       return
@@ -1032,7 +1069,7 @@ export class PuhdeCymaticsControls extends HTMLElement {
         }
       })
     }
-    if (this.isMobileStudio) {
+    if (this.tabbed) {
       // Name, Auto and value above the slider; Auto's settings under it.
       sliderContainer.prepend(sliderHead(label, autoLabel, slider, control))
       if (subControls) sliderContainer.appendChild(subControls)
@@ -1057,7 +1094,7 @@ export class PuhdeCymaticsControls extends HTMLElement {
     checkbox.type = 'checkbox'
     checkbox.checked = checked
     label.appendChild(checkbox)
-    label.appendChild(document.createTextNode(this.isMobileStudio ? 'Auto' : ' Dynamic'))
+    label.appendChild(document.createTextNode(this.tabbed ? 'Auto' : ' Dynamic'))
     return { label, checkbox }
   }
 
@@ -1090,48 +1127,21 @@ export class PuhdeCymaticsControls extends HTMLElement {
       this.place()
       return
     }
+    // The desktop studio panel slides as a whole (studio-panel.css).
+    if (this.tabbed) {
+      if (this.visible === 'true') this.syncDesk()
+      return
+    }
     this.slide()
   }
 
-  // Off a phone: in from the right in the studio, up from the bottom in the
-  // player. Read when it fires; it leaves the phone editor to its CSS, as an
-  // inline transform would pin it.
+  // The player's panel: up from the bottom. (The studio's panels slide in
+  // their CSS.) Read when it fires.
   slide() {
     setTimeout(() => {
       const panel = this.querySelector('.controls')
-      if (!panel || panel.classList.contains('editor')) return
-      const studio = this.mode === 'studio'
-      if (this.visible === 'true') {
-        panel.style.transform = studio ? 'translateX(0)' : 'translateY(0)'
-        this.initButtons()
-      } else {
-        panel.style.transform = studio ? 'translateX(300px)' : 'translateY(200px)'
-      }
-    })
-  }
-
-  initButtons() {
-    // Only the buttons this actually handles.
-    //
-    // This used to select every button in the document and assign .onclick to
-    // all of them. For anything without an fn attribute that is a no-op which
-    // *replaces* whatever handler the element already had — and it runs after
-    // render, so it always won. Any control that wired itself up with .onclick
-    // silently stopped working. addEventListener survives it, which is why the
-    // XY pad's own buttons were unaffected and the breakage went unnoticed.
-    sAll('button[fn]').forEach(button => {
-      button.onclick = (e) => {
-        const fn = button.getAttribute('fn')
-        if (fn === 'save') {
-          s('cymatics-presets').save()
-        }
-        if (fn === 'save-as') {
-          s('cymatics-presets').saveAs()
-        }
-        if (fn === 'set-default') {
-          s('cymatics-presets').setAsDefault(button)
-        }
-      }
+      if (!panel || this.tabbed) return
+      panel.style.transform = this.visible === 'true' ? 'translateY(0)' : 'translateY(200px)'
     })
   }
 

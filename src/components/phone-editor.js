@@ -1,12 +1,16 @@
 // The phone editor's parts: the Cancel / Done bar, the shell, a tool's
 // wrapper, its round icon button, the tab buttons and a slider's name row.
-// cymatics-controls builds the controls into the wrappers and decides which
-// one shows.
+// The desktop panel's shell is here too: it shares the wrappers and the name
+// row. cymatics-controls builds the controls into the wrappers and decides
+// which show.
 
 import { TABS } from '../studio/control-tabs.js'
 
 // The EQ is not in controls.js: it is p-equalizer, a tool of the Audio tab.
 export const EQ_TOOL = { id: 'eq', label: 'EQ', icon: 'eq', tab: 'audio' }
+
+// The band meter, at the top of the desktop's Audio tab. (The phone has none.)
+export const METER_TOOL = { id: 'meter', label: 'Bands', tab: 'audio' }
 
 const el = (tag, className, text) => {
 	const node = document.createElement(tag)
@@ -48,6 +52,40 @@ export function editorShell({ onCancel, onDone, onTab }) {
 	}
 	panel.append(area, toolRow, tabs)
 	return { bar, panel, area }
+}
+
+// The desktop panel's lower part: the tabs, a scrolling column of tools (all
+// of them; the selected tab's show) and the footer. Set as Default only when
+// `onSetDefault` is given (standalone); it is handed its button, which says
+// when it has saved.
+export function deskShell({ onTab, onSave, onSaveAs, onSetDefault }) {
+	const panel = el('div', 'controls desk')
+	const tabs = el('div', 'desk-tabs')
+	tabs.setAttribute('role', 'tablist')
+	for (const tab of TABS) {
+		const b = button('desk-tab', () => onTab(tab.id))
+		b.textContent = tab.label
+		b.dataset.tab = tab.id
+		b.setAttribute('role', 'tab')
+		tabs.append(b)
+	}
+	const tools = el('div', 'desk-tools')
+	tools.setAttribute('role', 'tabpanel')
+	const foot = el('div', 'desk-foot')
+	const save = button('desk-save', onSave)
+	save.textContent = 'Save'
+	save.title = 'Save (⌘S)'
+	const saveAs = button('desk-save-as', onSaveAs)
+	saveAs.textContent = 'Save As…'
+	saveAs.title = 'Save As (⇧⌘S)'
+	foot.append(save, saveAs)
+	if (onSetDefault) {
+		const setDefault = button('desk-default', (e) => onSetDefault(e.currentTarget))
+		setDefault.textContent = 'Set as Default'
+		foot.append(setDefault)
+	}
+	panel.append(tabs, tools, foot)
+	return { panel, tools }
 }
 
 // One tool's control. `big` ones (anything not a single slider) always take

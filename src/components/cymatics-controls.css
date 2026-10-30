@@ -67,52 +67,6 @@ input[type="range"]::-webkit-slider-thumb {
   position: absolute;
 }
 
-#app[mode="studio"] .sticky {
-  display: flex;
-  position: sticky;
-  bottom: -10px;
-  left: 0;
-  right: 0;
-  width: 245px;
-  z-index: 9;
-  background: #111;
-}
-
-#app[mode="studio"] button[fn="save"] {
-  color: #fff;
-  background: #226;
-  border: none;
-  border-radius: 9px;
-  width: -webkit-fill-available;
-  min-height: 36px;
-  margin: 10px;
-  cursor: pointer;
-  transition: all 0.39s ease-in-out;
-}
-
-/* Beside Save, and quieter: Save is the one you press most. */
-#app[mode="studio"] button[fn="save-as"] {
-  color: #ccc;
-  background: #224;
-  border: none;
-  border-radius: 9px;
-  min-height: 36px;
-  margin: 10px 10px 10px 0;
-  padding: 0 14px;
-  white-space: nowrap;
-  cursor: pointer;
-  transition: all 0.39s ease-in-out;
-}
-
-#app[mode="studio"] button[fn="set-default"] {
-  color: #999;
-  background: #224;
-  border: none;
-  border-radius: 9px;
-  margin: 10px auto;
-  cursor: pointer;
-}
-
 #app[mode="studio"] .controls .group {
   display: block;
 }
@@ -249,16 +203,6 @@ details[open] summary:after {
     max-height: calc(100% - 60px);
   }
 
-}
-
-@media (hover: hover) {
-  #app[mode="studio"] button[fn="save"]:hover {
-    background: #448;
-  }
-  #app[mode="studio"] button[fn="save-as"]:hover {
-    background: #336;
-    color: #fff;
-  }
 }
 
 /* Phone editor: one control at a time. From the bottom up, above the nav:
@@ -732,6 +676,370 @@ details[open] summary:after {
       margin-top: auto;
     }
 
+  }
+
+}
+
+/* ── Desktop: the studio panel's tabs, controls and footer ────────────────
+   cymatics-controls renders .controls.desk off a phone, under the presets in
+   the studio panel (studio-panel.css), which places and slides it. All of
+   the selected tab's tools show (.tool.selected); ones that do nothing now
+   are dimmed (.irrelevant), with the reason as their title. */
+#app[mode="studio"] .controls.desk {
+  --desk-gutter: 16px;
+  --desk-accent: #8fa6ff;
+  position: static;
+  z-index: auto;
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  width: auto;
+  height: auto;
+  min-height: 0;
+  padding: 0;
+  overflow: hidden;
+  background: none;
+  color: #eee;
+  transform: none;
+  transition: none;
+}
+
+.controls.desk .desk-tabs button,
+.controls.desk .desk-foot button {
+  appearance: none;
+  border: 0;
+  padding: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.controls.desk button:focus-visible,
+.controls.desk select:focus-visible {
+  outline: 2px solid var(--desk-accent);
+  outline-offset: 2px;
+}
+
+.controls.desk .desk-tabs {
+  display: flex;
+  flex: none;
+  padding: 0 8px;
+  border-top: 1px solid #24242b;
+  border-bottom: 1px solid #24242b;
+}
+
+.controls.desk .desk-tabs .desk-tab {
+  flex: 1;
+  height: 40px;
+  margin-bottom: -1px;
+  border-bottom: 2px solid transparent;
+  font-size: 12px;
+  color: #888;
+}
+
+.controls.desk .desk-tabs .desk-tab.selected {
+  border-bottom-color: var(--desk-accent);
+  color: #fff;
+}
+
+.controls.desk .desk-tools {
+  flex: 1 1 0;
+  min-height: 0;
+  padding: 8px var(--desk-gutter) 16px;
+  overflow: hidden auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+}
+
+/* Hidden, not removed: other code finds controls by global selectors. */
+.controls.desk .tool {
+  display: none;
+}
+
+.controls.desk .tool.selected {
+  display: block;
+}
+
+.controls.desk .tool.irrelevant {
+  opacity: .35;
+}
+
+/* A greyed control's Auto settings would only take room: folded away until
+   it does something again. (Their display is inline; hence !important.) */
+.controls.desk .tool.irrelevant .auto-settings {
+  display: none !important;
+}
+
+#app[mode="studio"] .controls.desk .control {
+  width: 100%;
+  height: auto;
+  min-width: 0;
+  min-height: 0;
+  margin: 0;
+  padding: 8px 0;
+  align-items: stretch;
+  justify-content: flex-start;
+  overflow: visible;
+  background: none;
+  border-radius: 0;
+  cursor: default;
+}
+
+#app[mode="studio"] .controls.desk .control label {
+  font-size: 12px;
+  color: #ddd;
+}
+
+/* A slider: name, Auto and value; then the slider. A colour: name, Auto
+   and the swatch. */
+.controls.desk .tool-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 24px;
+}
+
+.controls.desk .tool-value {
+  margin-left: auto;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--desk-accent);
+}
+
+.controls.desk .tool-head input[type="color"] {
+  margin-left: auto;
+}
+
+#app[mode="studio"] .controls.desk .control input[type="range"] {
+  width: 100%;
+  height: 20px;
+  margin: 4px 0 0;
+  background: transparent;
+  cursor: pointer;
+}
+
+#app[mode="studio"] .controls.desk .control input[type="range"]::-webkit-slider-runnable-track {
+  height: 4px;
+  border-radius: 2px;
+  background: #3a3a44;
+}
+
+#app[mode="studio"] .controls.desk .control input[type="range"]::-webkit-slider-thumb {
+  width: 14px;
+  height: 14px;
+  margin-top: -5px;
+  background: #fff;
+}
+
+#app[mode="studio"] .controls.desk .control input[type="range"]::-moz-range-track {
+  height: 4px;
+  border-radius: 2px;
+  background: #3a3a44;
+}
+
+#app[mode="studio"] .controls.desk .control input[type="range"]::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border: 0;
+  border-radius: 50%;
+  background: #fff;
+}
+
+#app[mode="studio"] .controls.desk .control input[type="range"]:disabled {
+  opacity: .35;
+  cursor: default;
+}
+
+/* Auto's settings (Band, At silence, At peak, Trigger, Speed): the rows'
+   210px and the sliders' 90px are inline styles; only !important outranks
+   those. */
+.controls.desk .auto-settings {
+  margin-top: 6px !important;
+}
+
+.controls.desk .auto-settings > div {
+  box-sizing: border-box;
+  width: auto !important;
+  min-height: 28px;
+}
+
+.controls.desk .auto-settings input[type="range"] {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+/* The Dynamic checkbox as an Auto pill, as on the phone. */
+.controls.desk .auto-toggle {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  height: 20px;
+  padding: 0 9px;
+  border: 1px solid #555;
+  border-radius: 10px;
+  font-size: 11px !important;
+  line-height: 1;
+  color: #aaa !important;
+  cursor: pointer;
+}
+
+.controls.desk .auto-toggle input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.controls.desk .auto-toggle:has(input:checked) {
+  border-color: transparent;
+  background: var(--desk-accent);
+  color: #111 !important;
+}
+
+.controls.desk .auto-toggle:has(input:focus-visible) {
+  outline: 2px solid var(--desk-accent);
+  outline-offset: 2px;
+}
+
+/* Field and Material, and the Liquid toggle: the name, then the control at
+   the end of its row. Formation: the name over its grid. */
+#app[mode="studio"] .controls.desk .control:has(> select),
+#app[mode="studio"] .controls.desk .control:has(> input[type="checkbox"]),
+#app[mode="studio"] .controls.desk .control:has(> input[type="color"]) {
+  flex-direction: row-reverse;
+  align-items: center;
+  justify-content: space-between;
+}
+
+#app[mode="studio"] .controls.desk .control:has(> pole-config) {
+  flex-direction: column-reverse;
+}
+
+#app[mode="studio"] .controls.desk .control > select {
+  min-width: 140px;
+  height: 28px;
+  padding: 0 8px;
+  border: 1px solid #333;
+  border-radius: 7px;
+  background: #222;
+  color: #eee;
+  font-size: 12px;
+}
+
+#app[mode="studio"] .controls.desk .control > input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  cursor: pointer;
+}
+
+#app[mode="studio"] .controls.desk .control:has(> input[type="checkbox"]) > label {
+  cursor: pointer;
+}
+
+#app[mode="studio"] .controls.desk .control > input[type="checkbox"],
+.controls.desk input[type="color"] {
+  accent-color: var(--desk-accent);
+}
+
+/* Pool Floor: its row's 220px is inline; the name, the picture, Choose and
+   Clear. */
+.controls.desk .tool[data-tool="floor_image"] .control > div {
+  width: auto !important;
+}
+
+.controls.desk .tool[data-tool="floor_image"] label {
+  white-space: nowrap;
+}
+
+#app[mode="studio"] .controls.desk .tool[data-tool="floor_image"] button {
+  width: auto;
+  height: 26px;
+  padding: 0 12px !important;
+  border: 0;
+  border-radius: 7px;
+  background: #24242b;
+  color: #ddd;
+  font-size: 12px !important;
+}
+
+#app[mode="studio"] .controls.desk .tool[data-tool="floor_image"] button:disabled {
+  opacity: .35;
+  cursor: default !important;
+}
+
+.controls.desk input[type="color"] {
+  width: 32px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid #333;
+  border-radius: 5px;
+  background: none;
+  cursor: pointer;
+}
+
+/* Components at their own sizes, centred: the band meter, the lights pad,
+   Formation's grid, the EQ. */
+#app[mode="studio"] .controls.desk xy-control {
+  background: none;
+}
+
+.controls.desk band-meter,
+.controls.desk p-equalizer {
+  margin: 0 auto;
+}
+
+.controls.desk .tool[data-tool="meter"] {
+  padding-bottom: 4px;
+  border-bottom: 1px solid #24242b;
+  margin-bottom: 4px;
+}
+
+.controls.desk .tool[data-tool="eq"] {
+  padding-top: 10px;
+}
+
+/* Save, Save As… and Set as Default, always in reach. */
+.controls.desk .desk-foot {
+  display: flex;
+  flex: none;
+  gap: 8px;
+  padding: 10px var(--desk-gutter) calc(10px + env(safe-area-inset-bottom));
+  border-top: 1px solid #24242b;
+}
+
+.controls.desk .desk-foot button {
+  flex: 1 1 auto;
+  height: 34px;
+  padding: 0 10px;
+  border-radius: 8px;
+  background: #24242b;
+  font-size: 12px;
+  white-space: nowrap;
+  color: #ccc;
+}
+
+.controls.desk .desk-foot .desk-save {
+  background: #2b2f55;
+  color: #fff;
+}
+
+@media (hover: hover) {
+
+  .controls.desk .desk-tabs .desk-tab:hover {
+    color: #ddd;
+  }
+
+  .controls.desk .desk-foot button:hover {
+    background: #30303a;
+    color: #fff;
+  }
+
+  .controls.desk .desk-foot .desk-save:hover {
+    background: #3a4078;
   }
 
 }
