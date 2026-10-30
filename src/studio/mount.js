@@ -203,6 +203,10 @@ const launchApp = () => {
     }
   } else {
     s('p-cymatics').loadConfig(defaultPresets[0].preset)
+    // Mark it in the panel, which otherwise opens on the first look.
+    const first = defaultPresets[0]
+    s('cymatics-presets').current = { source: 'factory', id: first.objectId, name: first.name }
+    s('cymatics-presets').listPresets()
   }
 
   // A host with a spectrum of its own (Music, on the desktop) is followed

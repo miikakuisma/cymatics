@@ -2,6 +2,7 @@ import { LOOKS, lookPreset } from '../element/looks.js'
 import { host } from '../studio/host.js'
 import { dynamicState } from '../dynamic-state.js'
 import { overDefaults } from '../studio/look-config.js'
+import { defaultPresets } from '../default-presets.js'
 
 // What is on the plate now, as a preset: the engine's three sections plus the
 // panel's modulator settings.
@@ -111,7 +112,12 @@ export class PuhdeCymaticsPresets extends HTMLElement {
 				this.listPresets()
 			})
 		}
-		heading('Yours')
+		// Factory presets first, then the user's own. Factory ones have no rename
+		// or delete, and Save on one goes to Save As, so they cannot be lost.
+		heading('Presets')
+		for (const f of defaultPresets) {
+			row(f.name, this.current.source === 'factory' && this.current.id === f.objectId, () => this.loadFactory(f))
+		}
 		for (const p of this.mine) {
 			row(p.name, this.current.source === 'own' && this.current.id === p.id, () => this.loadOwn(p), [
 				button('rename', 'Rename', '✎', () => this.renamePreset(p)),
@@ -127,6 +133,14 @@ export class PuhdeCymaticsPresets extends HTMLElement {
 			li.append(b)
 			ul.append(li)
 		}
+	}
+
+	// Over the engine defaults, as a look is: a factory preset that predates a
+	// key (No Plate has no field_mode) must not keep the last preset's value.
+	loadFactory(f) {
+		s('p-cymatics').loadConfig(overDefaults(f.preset))
+		this.current = { source: 'factory', id: f.objectId, name: f.name }
+		this.listPresets()
 	}
 
 	async loadOwn(p) {

@@ -17,6 +17,22 @@ const BAND_OPTIONS = [
   { value: 'kick', label: 'Kick' },
 ]
 
+// The light the XY pad has selected, or null. A preset can carry no lights at
+// all (lights: []), and loading one rebuilds this panel: indexing blindly threw
+// mid-load and left the preset half applied.
+function selectedLight() {
+  const handle = s('xy-control[controls="lights"]')?.selectedHandle ?? 0
+  return engine.state.rendererConfig.lights?.[handle] || null
+}
+
+function editSelectedLight(change) {
+  const handle = s('xy-control[controls="lights"]')?.selectedHandle ?? 0
+  const lights = structuredClone(engine.state.rendererConfig.lights || [])
+  if (!lights[handle]) return
+  change(lights[handle])
+  update('lights', lights)
+}
+
 const LEGACY_BAND_ALIASES = { bass: 'band2', mid: 'band4', high: 'band7' }
 
 function fillBandOptions(selectEl, currentValue) {
@@ -700,36 +716,33 @@ export class PuhdeCymaticsControls extends HTMLElement {
     }
     if (control.disabled) slider.setAttribute('disabled', true)
     if (control.name === 'light_distance') {
-      const selectedColorHandle = s('xy-control[controls="lights"]').selectedHandle
-      slider.setAttribute('value', parseFloat(engine.state.rendererConfig.lights[selectedColorHandle].pos[2]))
-      s('xy-control[controls="lights"]').values.z = parseFloat(engine.state.rendererConfig.lights[selectedColorHandle].pos[2])
+      const light = selectedLight()
+      if (light) {
+        slider.setAttribute('value', parseFloat(light.pos[2]))
+        s('xy-control[controls="lights"]').values.z = parseFloat(light.pos[2])
+      }
     }
     slider.setAttribute('step', control.step * boundScale)
     const label = document.createElement('label')
     label.innerText = control.label
     if (control.name === 'light_distance') {
       slider.oninput = (e) => {
-        const selectedColorHandle = s('xy-control[controls="lights"]').selectedHandle
-        let newLights = JSON.parse(JSON.stringify(engine.state.rendererConfig.lights))
-        newLights[selectedColorHandle].pos[2] = parseFloat(e.target.value)
-        update('lights', newLights)
+        editSelectedLight((light) => { light.pos[2] = parseFloat(e.target.value) })
       }
       setTimeout(() => {
-        const selectedColorHandle = s('xy-control[controls="lights"]').selectedHandle
-        s(`input[name="light_distance"]`).setAttribute('value', parseFloat(engine.state['rendererConfig'].lights[selectedColorHandle].pos[2]))
-        s('xy-control[controls="lights"]').values.z = parseFloat(engine.state.rendererConfig.lights[selectedColorHandle].pos[2])
+        const light = selectedLight()
+        if (!light) return
+        s(`input[name="light_distance"]`)?.setAttribute('value', parseFloat(light.pos[2]))
+        s('xy-control[controls="lights"]').values.z = parseFloat(light.pos[2])
       }, 500)
     } else if (control.name === 'light_softness') {
       slider.oninput = (e) => {
-        const selectedColorHandle = s('xy-control[controls="lights"]').selectedHandle
-        let newLights = JSON.parse(JSON.stringify(engine.state.rendererConfig.lights))
-        newLights[selectedColorHandle].roughness = parseFloat(e.target.value / 100)
-        update('lights', newLights)
+        editSelectedLight((light) => { light.roughness = parseFloat(e.target.value / 100) })
       }
       setTimeout(() => {
-        const selectedColorHandle = s('xy-control[controls="lights"]').selectedHandle
-        const roughness = engine.state.rendererConfig.lights[selectedColorHandle].roughness || 0.1
-        s(`input[name="light_softness"]`).setAttribute('value', roughness * 100)
+        const light = selectedLight()
+        if (!light) return
+        s(`input[name="light_softness"]`)?.setAttribute('value', (light.roughness || 0.1) * 100)
       }, 500)
     } else if (control.name === 'light_brightness') {
       slider.onpointerdown = (e) => {
@@ -737,10 +750,8 @@ export class PuhdeCymaticsControls extends HTMLElement {
         startC = e.target.value
       }
       slider.oninput = (e) => {
-        const selectedColorHandle = s('xy-control[controls="lights"]').selectedHandle
-        let newLights = JSON.parse(JSON.stringify(engine.state.rendererConfig.lights))
-        newLights[selectedColorHandle].color = [parseFloat(e.target.value), parseFloat(e.target.value), parseFloat(e.target.value)]
-        update('lights', newLights)
+        const v = parseFloat(e.target.value)
+        editSelectedLight((light) => { light.color = [v, v, v] })
       }
       setTimeout(() => {
         s(`input[name="light_brightness"]`).setAttribute('value', 1)
