@@ -1,7 +1,7 @@
 // Thumbnails for the picker: a stable key per preset, and a queue that renders
 // them one at a time. The renderer and cache are injected so this stays pure.
 
-export const THUMB_VERSION = 1
+export const THUMB_VERSION = 2
 
 function stableStringify(v) {
 	if (v === null || typeof v !== 'object') return JSON.stringify(v) ?? 'null'

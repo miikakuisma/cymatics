@@ -1,8 +1,8 @@
 // Renders a preset to a small JPEG with a short-lived engine of its own: the
-// thumbnail is the preset's real look, not a drawing of it. Browser only.
+// thumbnail is the preset's real look, not a drawing of it, driven by a fixed,
+// music-like spectrum so every look shows its character. Browser only.
 import { CymaticsEngine } from '../engine-js/index.js'
 import { applyPreset } from '../element/apply-preset.js'
-import { idleSpectrum } from '../element/idle.js'
 import { createBandFollower } from '../element/modulate.js'
 import { BINS } from '../element/scale.js'
 
@@ -10,6 +10,17 @@ export const THUMB_CSS_PX = 64
 const THUMB_FRAMES = 90
 const DT = 1 / 60
 const SAMPLE_RATE = 48000
+
+// Constant over time: strong bass, a mid bump and a broad tail, so rings,
+// detail and plates all form. The idle swell is too quiet for most looks.
+export function thumbSpectrum(out) {
+	const n = out.length
+	for (let i = 0; i < n; i++) {
+		const f = i / n
+		out[i] = Math.min(0.95, Math.exp(-f * 30) * 0.8 + Math.exp(-Math.pow((f - 0.08) * 25, 2)) * 0.45 + 0.3 * Math.exp(-f * 5))
+	}
+	return out
+}
 
 // Throws when WebGL2 is missing; the queue then reports every thumbnail as null.
 export function createThumbnailer() {
@@ -35,6 +46,7 @@ export function createThumbnailer() {
 		const { mods } = applyPreset(engine, defaults, preset)
 		const floor = preset.renderer?.floor_image
 		if (floor) await engine.uploadFromSrc('refraction', floor)
+		thumbSpectrum(spectrum)
 		const bands = createBandFollower()
 		const gl = engine.ctx.gl
 		// No awaits from here on: the drawing buffer is only readable in the
@@ -43,7 +55,6 @@ export function createThumbnailer() {
 			engine.ctx.bindDefaultFramebuffer()
 			gl.clearColor(0, 0, 0, 1)
 			gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
-			idleSpectrum(i * DT, spectrum)
 			engine.pushAudioSpectrum(spectrum, BINS, SAMPLE_RATE)
 			bands.step(spectrum, SAMPLE_RATE, { now: i * DT * 1000 })
 			mods.step(bands, (section, key, value) => {
