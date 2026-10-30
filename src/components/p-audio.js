@@ -122,15 +122,28 @@ const defaultStations = [
   { name: 'Radio Ibiza', url: 'https://ice07.fluidstream.net/Ibiza.mp3' },
 ]
 
-// Tone generator range and level. 20 Hz – 10 kHz covers every plate mode the
-// figures can show; the slider maps it logarithmically.
+// Tone generator range and level. The slider covers 20 Hz – 10 kHz, every
+// plate mode the figures can show, logarithmically; a typed frequency may go
+// anywhere from 1 Hz to 20 kHz, to two decimals.
 const TONE_MIN_HZ = 20
 const TONE_MAX_HZ = 10000
+const TONE_TYPED_MIN_HZ = 1
+const TONE_TYPED_MAX_HZ = 20000
 const TONE_STEPS = 1000
 const TONE_VOLUME = 0.15
-const toneToStep = (hz) => Math.round(TONE_STEPS * Math.log(hz / TONE_MIN_HZ) / Math.log(TONE_MAX_HZ / TONE_MIN_HZ))
+const toneToStep = (hz) => {
+  const clamped = Math.min(Math.max(hz, TONE_MIN_HZ), TONE_MAX_HZ)
+  return Math.round(TONE_STEPS * Math.log(clamped / TONE_MIN_HZ) / Math.log(TONE_MAX_HZ / TONE_MIN_HZ))
+}
 const stepToTone = (step) => Math.round(TONE_MIN_HZ * Math.pow(TONE_MAX_HZ / TONE_MIN_HZ, step / TONE_STEPS))
-const formatHz = (hz) => hz >= 1000 ? `${(hz / 1000).toFixed(2)} kHz` : `${hz} Hz`
+const typedTone = (text) => {
+  // An emptied box (or anything a number field rejects, which reads as '') is
+  // no value at all, not 0 Hz.
+  if (String(text).trim() === '') return null
+  const hz = Number(text)
+  if (!Number.isFinite(hz)) return null
+  return Math.round(Math.min(Math.max(hz, TONE_TYPED_MIN_HZ), TONE_TYPED_MAX_HZ) * 100) / 100
+}
 
 function getPlayBtn() {
   return document.querySelector('p-nav button[fn="play"]') || document.querySelector('.simple-play-btn')
@@ -165,8 +178,8 @@ export class PuhdeAudio extends HTMLElement {
     this.analyser = null
     this.micStream = null
     this.oscillatorNode = null
-    this.oscFreq = 440            // the tone generator's last settings, kept
-    this.oscType = 'sine'         // between plays
+    this.oscFreq = 440            // the tone generator's last frequency, kept
+                                  // between plays
     this.beatGrid = null          // array of beat timestamps in seconds
     this.playbackStartTime = 0    // audioContext.currentTime when .start() called
     this.streamTurn = null        // AbortController for the running stream copy
@@ -218,38 +231,44 @@ export class PuhdeAudio extends HTMLElement {
 
   // --- Render ---
 
-  // The tone generator: one oscillator, for finding what a single frequency
-  // does to the plate. The slider is logarithmic, as pitch is heard — linear,
-  // everything below 1 kHz would sit in its first twentieth.
+  // The tone generator: one sine, for finding what a single frequency does to
+  // the plate. Other waveforms only added harmonics that crowded the figure.
+  // The slider is logarithmic, as pitch is heard — linear, everything below
+  // 1 kHz would sit in its first twentieth — and the box takes an exact value.
   renderOscillatorOverlay() {
     const freq = this.oscFreq
-    const type = this.oscType
-    const waves = [['sine', 'sine'], ['square', 'square'], ['triangle', 'triangle'], ['sawtooth', 'saw']]
     this.innerHTML = `
       <div class="osc-overlay">
-        <div class="osc-freq"><input type="range" min="0" max="${TONE_STEPS}" value="${toneToStep(freq)}" step="1" aria-label="Frequency" /><span class="osc-freq-label">${formatHz(freq)}</span></div>
-        <div class="osc-waveform">
-          ${waves.map(([t, label]) =>
-            `<button class="osc-type${t === type ? ' active' : ''}" data-type="${t}">${label}</button>`
-          ).join('')}
+        <div class="osc-freq">
+          <input type="range" min="0" max="${TONE_STEPS}" value="${toneToStep(freq)}" step="1" aria-label="Frequency" />
+          <input type="number" class="osc-hz" min="${TONE_TYPED_MIN_HZ}" max="${TONE_TYPED_MAX_HZ}" step="any" value="${freq}" inputmode="decimal" aria-label="Frequency in hertz" />
+          <span class="osc-unit">Hz</span>
         </div>
         <button class="osc-stop">Stop</button>
       </div>
     `
-    const freqSlider = this.querySelector('.osc-freq input')
-    const freqLabel = this.querySelector('.osc-freq-label')
+    const freqSlider = this.querySelector('.osc-freq input[type="range"]')
+    const freqBox = this.querySelector('.osc-hz')
     freqSlider.addEventListener('input', (e) => {
       const v = stepToTone(parseFloat(e.target.value))
       this.setOscillatorFrequency(v)
-      freqLabel.textContent = formatHz(v)
+      freqBox.value = v
     })
-    this.querySelectorAll('.osc-type').forEach(btn => {
-      btn.addEventListener('click', () => {
-        this.setOscillatorType(btn.getAttribute('data-type'))
-        this.querySelectorAll('.osc-type').forEach(b => b.classList.remove('active'))
-        btn.classList.add('active')
-      })
+    // Follow the box as it is typed, but only rewrite it on commit (Enter or
+    // leaving it), so a half-typed number is never corrected under the cursor.
+    freqBox.addEventListener('input', () => {
+      const v = typedTone(freqBox.value)
+      if (v === null) return
+      this.setOscillatorFrequency(v)
+      freqSlider.value = toneToStep(v)
     })
+    freqBox.addEventListener('change', () => {
+      const v = typedTone(freqBox.value) ?? this.oscFreq
+      this.setOscillatorFrequency(v)
+      freqBox.value = v
+      freqSlider.value = toneToStep(v)
+    })
+    freqBox.addEventListener('keydown', (e) => { if (e.key === 'Enter') freqBox.blur() })
     this.querySelector('.osc-stop').addEventListener('click', () => {
       this.stopCurrentAudio()
       const pb = getPlayBtn()
@@ -953,13 +972,13 @@ export class PuhdeAudio extends HTMLElement {
     })
   }
 
-  async playOscillator(freq = this.oscFreq, waveType = this.oscType) {
+  async playOscillator(freq = this.oscFreq) {
     this.stopCurrentAudio()
     this.mode = 'oscillator'
     this.context = new AudioCtx()
     await this.context.resume()
     this.oscillatorNode = this.context.createOscillator()
-    this.oscillatorNode.type = waveType
+    this.oscillatorNode.type = 'sine'
     this.oscillatorNode.frequency.setValueAtTime(freq, this.context.currentTime)
     // Use oscillator as the audio source for the cymatics chain
     this.audioSource = this.oscillatorNode
@@ -977,13 +996,6 @@ export class PuhdeAudio extends HTMLElement {
       // A short glide rather than a jump: stepping the frequency mid-cycle
       // clicks, and dragging the slider steps it every frame.
       this.oscillatorNode.frequency.setTargetAtTime(value, this.context.currentTime, 0.015)
-    }
-  }
-
-  setOscillatorType(type) {
-    this.oscType = type
-    if (this.oscillatorNode) {
-      this.oscillatorNode.type = type
     }
   }
 

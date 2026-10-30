@@ -113,41 +113,26 @@ p-audio .osc-freq input[type="range"] {
   accent-color: #4af;
 }
 
-p-audio .osc-freq-label {
-  color: #ccc;
+p-audio .osc-freq input.osc-hz {
+  width: 72px;
+  padding: 3px 6px;
+  background: rgba(255,255,255,0.08);
+  color: #eee;
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 4px;
   font-size: 13px;
-  min-width: 60px;
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
 
-p-audio .osc-waveform {
-  display: flex;
-  gap: 4px;
-  margin-top: 8px;
-}
-
-p-audio .osc-waveform button.osc-type {
-  flex: 1;
-  height: 28px;
-  padding: 0;
-  font-size: 11px;
-  background: rgba(255,255,255,0.08);
-  color: #999;
-  border: 1px solid rgba(255,255,255,0.15);
-  border-radius: 4px;
-  cursor: pointer;
-  text-align: center;
-}
-
-p-audio .osc-waveform button.osc-type.active {
-  background: #136;
-  color: white;
+p-audio .osc-freq input.osc-hz:focus {
+  outline: none;
   border-color: #369;
 }
 
-p-audio .osc-waveform button.osc-type:hover {
-  background: rgba(255,255,255,0.15);
+p-audio .osc-unit {
+  color: #999;
+  font-size: 12px;
 }
 
 p-audio .osc-stop {

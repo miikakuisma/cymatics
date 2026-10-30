@@ -75,14 +75,14 @@ for the round plate. The engine README has the details.
 
 ### Tone generator
 
-**Tone Generator** plays one steady tone, to show what a single frequency does
-to the plate. Drag the slider from 20 Hz to 10 kHz and pick **sine**,
-**square**, **triangle** or **saw**. A sine rings the cleanest figure. The
-other waveforms add harmonics, so several modes ring at once. The tone plays
-quietly through your speakers, and **Stop** or the pause button ends it.
+**Tone Generator** plays one steady sine tone, to show what a single frequency
+does to the plate. Drag the slider from 20 Hz to 10 kHz, or type an exact
+frequency into the box next to it (anything from 1 Hz to 20 kHz, decimals
+allowed). The tone plays quietly through your speakers, and **Stop** or the
+pause button ends it.
 
-Good places to start: a **Round plate** at full **Distance** with a sine, swept
-slowly upward; or a **Square plate**, where neighbouring frequencies flip
+Good places to start: a **Round plate** at full **Distance**, swept slowly
+upward; or a **Square plate**, where neighbouring frequencies flip
 between quite different figures.
 
 ## Commands

@@ -163,8 +163,8 @@ the plate's size and so its level of detail, contour mode draws only nodal
 lines, and Freq Detail, Contour Detail and Formation do nothing — the studio
 greys them out (`sourcesOnly` in `controls.js`). Details in the engine README.
 
-The **Tone Generator** source (`tone`, `p-audio.js`) plays one oscillator — sine,
-square, triangle or saw, 20 Hz–10 kHz on a logarithmic slider — for finding
+The **Tone Generator** source (`tone`, `p-audio.js`) plays one sine — 20 Hz–10 kHz
+on a logarithmic slider, or any typed value from 1 Hz to 20 kHz — for finding
 what a single frequency does to a plate. It is heard at 0.15 gain; the analyser
 still gets it at full level.
 
