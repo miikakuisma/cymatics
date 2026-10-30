@@ -39,12 +39,18 @@ export class PuhdeCymaticsPresets extends HTMLElement {
 		void this.refresh()
 		window.exportPreset = () => console.log(JSON.stringify(currentPreset()))
 		// Phone and desktop lay the panel out differently.
-		phoneQuery().addEventListener('change', () => {
+		this.onLayout = () => {
 			closeMenu()
 			this.render()
 			this.listPresets()
-		})
+		}
+		phoneQuery().addEventListener('change', this.onLayout)
   }
+
+	disconnectedCallback() {
+		phoneQuery().removeEventListener('change', this.onLayout)
+		closeMenu()
+	}
 
 	static get observedAttributes() {
 		return ['visible']
@@ -183,6 +189,7 @@ export class PuhdeCymaticsPresets extends HTMLElement {
 		head.append(title, moreButton('Preset options', (anchor) => openMenu(anchor, [
 			{ label: 'Save', run: () => this.save() },
 			...(host().chrome.standalone ? [{ label: 'Set as Default', run: () => this.setAsDefault() }] : []),
+			...host().actions.filter((action) => !action.needsSaved).map((action) => this.actionItem(action)),
 		], this)))
 
 		const looks = LOOKS.map((look) => {
@@ -204,11 +211,7 @@ export class PuhdeCymaticsPresets extends HTMLElement {
 				more: current ? (anchor) => openMenu(anchor, [
 					{ label: 'Rename', run: () => this.renamePreset(p) },
 					{ label: 'Delete', run: () => this.deletePreset(p) },
-					...host().actions.map((action) => ({
-						label: action.label,
-						disabled: !this.canRun(action),
-						run: () => action.run({ id: this.current.id, name: this.current.name }),
-					})),
+					...host().actions.map((action) => this.actionItem(action)),
 				], this) : null,
 			})
 			this.paint(t.img, `own:${p.id}`, () => host().presets.read(p.id))
@@ -231,12 +234,17 @@ export class PuhdeCymaticsPresets extends HTMLElement {
 		body.querySelectorAll('.sheet-row').forEach((r, i) => { r.scrollLeft = scrolled[i] ?? 0 })
 	}
 
-	// A tile's picture: the one drawn before at once, then the queue's, which
-	// is fresh if the preset changed. Only while the sheet is open, so nothing
-	// renders before it is first wanted; a tile replaced meanwhile is left be.
+	// A tile's picture: the one drawn before, at once, or else the queue's,
+	// asked for only while the sheet is open, so nothing renders before it is
+	// first wanted. A tile replaced meanwhile is left be. Looks and factory
+	// presets never change; an own preset's entry is dropped when it is saved,
+	// renamed or deleted.
 	paint(img, key, load) {
 		const known = this.thumbs.get(key)
-		if (known) img.src = known
+		if (known) {
+			img.src = known
+			return
+		}
 		if (this.visible !== 'true') return
 		Promise.resolve()
 			.then(load)
@@ -252,6 +260,14 @@ export class PuhdeCymaticsPresets extends HTMLElement {
 	// A host action that needs a saved preset waits for one of yours.
 	canRun(action) {
 		return !action.needsSaved || this.current.source === 'own'
+	}
+
+	actionItem(action) {
+		return {
+			label: action.label,
+			disabled: !this.canRun(action),
+			run: () => action.run({ id: this.current.id, name: this.current.name }),
+		}
 	}
 
 	loadLook(look) {
@@ -318,6 +334,7 @@ export class PuhdeCymaticsPresets extends HTMLElement {
 	async write({ id, name, replace }) {
 		try {
 			const saved = await host().presets.save({ id, name, preset: currentPreset(), replace })
+			this.thumbs.delete(`own:${saved.id}`)
 			this.current = { source: 'own', id: saved.id, name: saved.name }
 			await this.refresh()
 			this.say(`Saved “${saved.name}”.`)
@@ -357,6 +374,7 @@ export class PuhdeCymaticsPresets extends HTMLElement {
 				if (!next || next === p.name) return
 				try {
 					const renamed = await host().presets.rename(p.id, next)
+					this.thumbs.delete(`own:${p.id}`)
 					if (this.current.source === 'own' && this.current.id === p.id) this.current = { source: 'own', ...renamed }
 					await this.refresh()
 				} catch (error) {
@@ -370,6 +388,7 @@ export class PuhdeCymaticsPresets extends HTMLElement {
 		if (!(await this.ask(`Delete “${p.name}”?`, 'Delete'))) return
 		try {
 			await host().presets.remove(p.id)
+			this.thumbs.delete(`own:${p.id}`)
 			if (this.current.source === 'own' && this.current.id === p.id) this.current = { source: 'file', id: null, name: p.name }
 			await this.refresh()
 		} catch (error) {

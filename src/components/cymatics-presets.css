@@ -226,7 +226,7 @@ cymatics-presets .preset-action button { width: 100%; }
   }
 
   .presets.sheet .sheet-label {
-    margin: 2px 0 6px;
+    margin: 2px 0 0;
     padding: 0 var(--sheet-gutter);
     font-size: 10px;
     letter-spacing: .12em;
@@ -234,12 +234,14 @@ cymatics-presets .preset-action button { width: 100%; }
     opacity: .5;
   }
 
-  /* Rows: swiped sideways with momentum, without dragging the page along. */
+  /* Rows: swiped sideways with momentum, without dragging the page along.
+     The top padding is room for the ⋯ badge's hit area, which the row's
+     overflow would otherwise clip. */
   .presets.sheet .sheet-row {
     display: flex;
     gap: 8px;
-    margin-bottom: 8px;
-    padding: 0 var(--sheet-gutter);
+    margin-bottom: 4px;
+    padding: 10px var(--sheet-gutter) 0;
     overflow-x: auto;
     overflow-y: hidden;
     scroll-snap-type: x proximity;
@@ -267,7 +269,6 @@ cymatics-presets .preset-action button { width: 100%; }
     align-items: center;
     gap: 4px;
     width: 100%;
-    padding-top: 2px;
   }
 
   .presets.sheet .tile-thumb {
@@ -315,11 +316,14 @@ cymatics-presets .preset-action button { width: 100%; }
     color: #fff;
   }
 
-  /* The selected own tile's ⋯: small to see, 44px to hit. */
+  /* The selected own tile's ⋯, on the thumb's corner: 24px to see, 44px to
+     hit (the row's top padding holds the 10px above it; z-index keeps the
+     next tile from covering the 10px to its right). */
   .presets.sheet .tile-more {
     position: absolute;
-    top: -2px;
-    right: -2px;
+    top: 0;
+    right: 0;
+    z-index: 1;
     width: 24px;
     height: 24px;
     border-radius: 50%;
