@@ -43,6 +43,8 @@ uniform float polyOffset;
 uniform float margin;
 
 const float PI = 3.14159265358979;
+// Mirrored in plate-bake.js (MAX_TERMS, MAX_CORNERS), whose
+// checkBakeBounds holds the shipped data to them.
 const int MAX_TERMS = 128;
 const int MAX_CORNERS = 8;
 

@@ -12,10 +12,10 @@
 // Bakes happen before the field pass binds its own target (cymatics.js
 // render()), never inside it.
 
-import { Fbo, FLOAT32, Program } from './glutil.js'
+import { Fbo, FLOAT32_SINGLE, Program } from './glutil.js'
 import { BESSEL_X_MAX } from './modes.js'
 import {
-	cornerBesselTable, cornerFrame, cornerOrders, modeGain, plateCoeffTexture, plateCornerTexture,
+	CORNER_X_MAX, cornerBesselTable, cornerFrame, cornerOrders, modeGain, plateCoeffTexture, plateCornerTexture,
 	plateStoredModes, polygonModes,
 } from './plate-modes.js'
 import { polygon } from './polygons.js'
@@ -46,6 +46,39 @@ export function createLru(capacity) {
 			return evicted
 		},
 		keys() { return map.keys() },
+	}
+}
+
+// plate_bake.fsh's loop bounds: keep these equal to its MAX_TERMS and
+// MAX_CORNERS, and its vec4 of corner orders.
+export const MAX_TERMS = 128
+export const MAX_CORNERS = 8
+export const MAX_CORNER_ORDERS = 4
+
+// How far outside the outline a bake keeps the series' continuation, in
+// texels, so the field pass's linear filtering of the edge texels sees no step.
+export const MARGIN_TEXELS = 3
+/** The margin in plateUv units (−1..1 across `size` texels). */
+export const bakeMargin = (size) => MARGIN_TEXELS * 2 / size
+
+/**
+ * Throws unless a shape's shipped data fits the bake shader: its loop bounds,
+ * and its Bessel tables' x-ranges over every point a bake evaluates. That is
+ * the outline widened by the margin, whose vertices lie at
+ * reach = 1 + margin / cos(π/N) from the centre and 2·reach from vertex 0.
+ */
+export function checkBakeBounds(sides, size = 512) {
+	const coeff = plateCoeffTexture(sides)
+	const corner = plateCornerTexture(sides)
+	const stored = plateStoredModes(sides)
+	const fail = (what) => { throw new Error(`plate ${sides}: ${what} exceeds what plate_bake.fsh holds`) }
+	if (coeff.width > MAX_TERMS) fail(`${coeff.width} centre terms`)
+	if (corner.width > MAX_CORNERS) fail(`${corner.width} corner terms`)
+	if (cornerOrders(sides).length > MAX_CORNER_ORDERS) fail(`${cornerOrders(sides).length} corner orders`)
+	const reach = 1 + bakeMargin(size) / Math.cos(Math.PI / sides)
+	for (const m of stored) {
+		if (m.k * reach > BESSEL_X_MAX) fail(`k = ${m.k} over the Bessel table`)
+		if (m.cornerM.length && 2 * m.k * reach > CORNER_X_MAX) fail(`k = ${m.k} over the corner Bessel table`)
 	}
 }
 
@@ -88,11 +121,8 @@ export class PlateBaker {
 		const corner = plateCornerTexture(sides)
 		const table = cornerBesselTable(sides)
 		const frame = cornerFrame(sides)
-		// The shader's loop bounds: MAX_TERMS, MAX_CORNERS and a vec4 of orders.
-		if (coeff.width > 128 || corner.width > 8 || cornerOrders(sides).length > 4) {
-			throw new Error(`plate ${sides}: more terms than plate_bake.fsh holds`)
-		}
-		const mus = new Float32Array(4) // 0 past the last order
+		checkBakeBounds(sides, this.size)
+		const mus = new Float32Array(MAX_CORNER_ORDERS) // 0 past the last order
 		cornerOrders(sides).forEach((mu, m) => { mus[m] = mu })
 		return (this.shapes[sides] = {
 			coeff: dataTexture(gl, gl.RG32F, gl.RG, coeff.width, coeff.height, coeff.data),
@@ -111,12 +141,19 @@ export class PlateBaker {
 		const key = `${sides}:${listIndex}`
 		const hit = this.lru.get(key)
 		if (hit) return hit.fbo.texture
+		// Everything that can throw comes before the cache is touched, so a
+		// bad request never leaves an unbaked entry behind.
+		this.shape(sides)
+		const mode = polygonModes(sides)[listIndex]
+		if (!mode) throw new Error(`plate ${sides}: no mode ${listIndex}`)
 		const entry = { fbo: null }
 		// The figure pushed out to make room gives up its render target.
 		const evicted = this.lru.put(key, entry)
-		entry.fbo = evicted ? evicted.fbo : new Fbo(this.ctx, this.size, this.size, { dataType: FLOAT32 })
+		// One channel is all a figure needs: R32F, or R16F under glutil's
+		// half-float fallback, which the field itself also follows.
+		entry.fbo = evicted ? evicted.fbo : new Fbo(this.ctx, this.size, this.size, { dataType: FLOAT32_SINGLE })
 		this.fbos.add(entry.fbo)
-		this.bake(entry.fbo, sides, polygonModes(sides)[listIndex])
+		this.bake(entry.fbo, sides, mode)
 		return entry.fbo.texture
 	}
 
@@ -152,7 +189,7 @@ export class PlateBaker {
 		// Past this distance outside the outline nothing samples the figure;
 		// inside it, the series' own continuation keeps the edge texels'
 		// filtering honest.
-		p.float('margin', 6 / this.size)
+		p.float('margin', bakeMargin(this.size))
 		this.ctx.drawQuad()
 		fbo.unbind()
 		this.bakes++
