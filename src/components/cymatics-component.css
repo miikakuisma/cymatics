@@ -99,50 +99,18 @@ p-cymatics img#frame {
 }
 
 /* ── Phone: room for the plate ─────────────────────────────────────────────
-   mount.js (fitPlate) marks the wrapper .sheet-picker or .sheet-editor, plus
-   .sheet-editor-tall while the editor's tool takes its tall area. The plate,
-   still square, fills what the panel leaves: the space above it upright, the
-   space left of its 300px column sideways. The query is PHONE_QUERY
-   (src/studio/layout.js), copied verbatim.
-
-   --sheet-vh and --sheet-px are the panel's height above the screen's bottom
-   inset, as N dvh + px. The picker sheet is at most 40dvh; the editor is 8px
-   of padding, the 96px tool area, 82px of tool icons and 45px of tabs, its
-   tall area up to 45dvh in place of the 96px; both sit on the 48px nav.
-   p-audio.css docks the source menu and the tone controls by them too. */
+   While the picker or the editor is open, mount.js (fitPlate) marks the
+   wrapper .sheet-picker or .sheet-editor (plus .sheet-editor-tall while the
+   editor's tool takes its tall area) and measures the space the panel leaves:
+   --plate-top (the bottom of Cancel / Done in the editor, else 0),
+   --plate-bottom (the panel's top, or the screen's bottom beside a column)
+   and --plate-width (the screen, or what is left of the column). The plate
+   is the largest square in that space, centred. The query is PHONE_QUERY
+   (src/studio/layout.js), copied verbatim. */
 @media (max-width: 768px), (pointer: coarse) and (max-height: 500px) {
 
-  #app[mode="studio"] {
-    --vh: 1vh;
-    --sheet-vh: 0;
-    --sheet-px: 0px;
-    --sheet-room: calc(var(--sheet-vh) * var(--vh) + var(--sheet-px) + env(safe-area-inset-bottom));
-    --sheet-side: calc(300px + env(safe-area-inset-right));
-  }
-
-  @supports (height: 1dvh) {
-    #app[mode="studio"] {
-      --vh: 1dvh;
-    }
-  }
-
-  #app[mode="studio"]:has(> .cymatics-wrapper.sheet-picker) {
-    --sheet-vh: 40;
-    --sheet-px: 48px;
-  }
-
-  #app[mode="studio"]:has(> .cymatics-wrapper.sheet-editor) {
-    --sheet-vh: 0;
-    --sheet-px: 280px;
-  }
-
-  #app[mode="studio"]:has(> .cymatics-wrapper.sheet-editor-tall) {
-    --sheet-vh: 45;
-    --sheet-px: 184px;
-  }
-
   #app[mode="studio"] .cymatics-wrapper {
-    transition: height .39s ease-in-out, right .39s ease-in-out;
+    transition: top .39s ease-in-out, height .39s ease-in-out, right .39s ease-in-out;
   }
 
   /* While the plate changes size the canvas scales with it; mount.js has it
@@ -153,30 +121,17 @@ p-cymatics img#frame {
     height: 100% !important;
   }
 
-  @media (orientation: portrait) {
-
-    #app[mode="studio"] .cymatics-wrapper:is(.sheet-picker, .sheet-editor) {
-      height: calc(100 * var(--vh) - var(--sheet-room));
-    }
-
-    #app[mode="studio"] .cymatics-wrapper:is(.sheet-picker, .sheet-editor) p-cymatics {
-      width: min(100vw, 100 * var(--vh) - var(--sheet-room)) !important;
-      height: min(100vw, 100 * var(--vh) - var(--sheet-room)) !important;
-    }
-
+  #app[mode="studio"] .cymatics-wrapper:is(.sheet-picker, .sheet-editor) {
+    --plate-from: max(env(safe-area-inset-top), var(--plate-top, 0px));
+    --plate-height: calc(var(--plate-bottom, 100vh) - var(--plate-from));
+    top: var(--plate-from);
+    right: calc(100% - var(--plate-width, 100vw));
+    height: var(--plate-height);
   }
 
-  @media (orientation: landscape) {
-
-    #app[mode="studio"] .cymatics-wrapper:is(.sheet-picker, .sheet-editor) {
-      right: var(--sheet-side);
-    }
-
-    #app[mode="studio"] .cymatics-wrapper:is(.sheet-picker, .sheet-editor) p-cymatics {
-      width: min(100vh, 100vw - var(--sheet-side)) !important;
-      height: min(100vh, 100vw - var(--sheet-side)) !important;
-    }
-
+  #app[mode="studio"] .cymatics-wrapper:is(.sheet-picker, .sheet-editor) p-cymatics {
+    width: min(var(--plate-width, 100vw), var(--plate-height)) !important;
+    height: min(var(--plate-width, 100vw), var(--plate-height)) !important;
   }
 
 }

@@ -64,28 +64,78 @@ function show(phase) {
   fitPlate(phase)
 }
 
-// The plate's room on a phone (cymatics-component.css): above the picker
-// sheet, above the editor, or above the editor's tall area while its tool
-// needs one.
+// The plate's room on a phone, measured: the largest square between the top
+// of the screen (or the bottom of Cancel / Done, in the editor) and the open
+// panel, or left of the panel when it is a column, sideways. The figures go
+// to the wrapper, which cymatics-component.css sizes from them, and to
+// p-audio, whose popups p-audio.css docks by them. The .sheet-* classes say
+// which panel is open. Panels and the bar are fixed and slide in with a
+// transform, which offsetTop / offsetLeft leave out: they read where the
+// panel will be, not where its slide has got to.
 const PLATE_ROOM = ['sheet-picker', 'sheet-editor', 'sheet-editor-tall']
+const PLATE_VARS = ['--plate-top', '--plate-bottom', '--plate-width']
 let plateTimer
+let plateKey = 'null'
+let plateWatched = []
+const plateObserver = typeof ResizeObserver === 'function'
+  ? new ResizeObserver(() => fitPlate(phoneStudio().phase))
+  : null
 
 function fitPlate(phase) {
   const wrapper = s('.cymatics-wrapper')
   const phone = phoneQuery().matches
   const editor = phone && phase === 'editor'
-  const want = {
+  for (const [name, on] of Object.entries({
     'sheet-picker': phone && phase === 'picker',
     'sheet-editor': editor,
     'sheet-editor-tall': editor && s('cymatics-controls').tall,
+  })) wrapper.classList.toggle(name, on)
+
+  const panel = !phone ? null
+    : phase === 'picker' ? s('cymatics-presets .presets.sheet')
+    : editor ? s('cymatics-controls .controls.editor')
+    : null
+  const bar = editor ? s('cymatics-controls .editor-bar') : null
+  watchPlate([panel, bar].filter(Boolean))
+
+  const room = panel ? measurePlate(panel, bar) : null
+  for (const el of [wrapper, s('p-audio')]) {
+    for (const name of PLATE_VARS) {
+      if (room) el?.style.setProperty(name, `${room[name]}px`)
+      else el?.style.removeProperty(name)
+    }
   }
-  const changed = PLATE_ROOM.filter((name) => wrapper.classList.contains(name) !== want[name])
-  if (!changed.length) return
-  for (const name of changed) wrapper.classList.toggle(name, want[name])
+
+  const key = PLATE_ROOM.filter((name) => wrapper.classList.contains(name)).join() + JSON.stringify(room)
+  if (key === plateKey) return
+  plateKey = key
   // The canvas keeps its pixel size until told. Told once the plate has
   // settled (its transition is .39s); meanwhile it scales with the plate.
   clearTimeout(plateTimer)
   plateTimer = setTimeout(() => engine.api.resizeHandler(), 400)
+}
+
+function measurePlate(panel, bar) {
+  const column = panel.offsetLeft > 0
+  const width = column ? panel.offsetLeft : innerWidth
+  // The bar spans the screen upright; sideways it sits over the column only.
+  const top = bar && bar.offsetLeft < width ? bar.offsetTop + bar.offsetHeight : 0
+  return {
+    '--plate-top': top,
+    '--plate-bottom': column ? innerHeight : panel.offsetTop,
+    '--plate-width': width,
+  }
+}
+
+// Follows the open panel and bar as they change size (a tool's tall area, a
+// note under Adjust) and as they are rebuilt (each preset load renders the
+// editor anew; the old one, removed, reports a size of nothing).
+function watchPlate(els) {
+  if (!plateObserver) return
+  if (els.length === plateWatched.length && els.every((el, i) => el === plateWatched[i])) return
+  plateObserver.disconnect()
+  for (const el of els) plateObserver.observe(el)
+  plateWatched = els
 }
 
 const launchApp = () => {
@@ -205,8 +255,10 @@ const launchApp = () => {
     }
   })
 
-  // The editor's tall area comes and goes with its selected tool.
+  // The editor's tall area comes and goes with its selected tool, and the
+  // screen can change size under either panel.
   cymaticsControls.addEventListener('toolchange', () => fitPlate(phoneStudio().phase))
+  addEventListener('resize', () => fitPlate(phoneStudio().phase))
 
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Tab' && !e.target.matches('input, textarea, select')) {
