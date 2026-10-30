@@ -97,7 +97,10 @@ export class PuhdeEqualizer extends HTMLElement {
       </div>
     `
     this.renderBands()
-    this.querySelector('#monitor').addEventListener('change', (e) => {
+    // The panel is rebuilt on every preset load; Monitor stays as it is.
+    const monitor = this.querySelector('#monitor')
+    monitor.checked = Boolean(s('p-audio')?.monitoring)
+    monitor.addEventListener('change', (e) => {
       if (e.target.checked) {
         s('p-audio').connectEq(true)
       } else {
