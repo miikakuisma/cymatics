@@ -13,7 +13,7 @@ import { Fbo, Program, attrToValue, createColorTexture, FLOAT32 } from './glutil
 import { shader } from './shaders.js'
 import {
 	BESSEL_ROWS, BESSEL_WIDTH, BESSEL_X_MAX, FIELD_ROUND, FIELD_SOURCES, MAX_ACTIVE_MODES,
-	besselTable, modeBinRanges, pickModes, plateFundamentalHz, roundModes, squareModes,
+	besselTable, clampFieldMode, modeBinRanges, pickModes, plateFundamentalHz, roundModes, squareModes,
 } from './modes.js'
 
 const BAND_MIN_HZ = [20, 80, 250, 2000]
@@ -357,8 +357,7 @@ export class Cymatics {
 		this.freqDetailScale = num('freq_detail_scale', this.freqDetailScale)
 		this.contourMode = num('contour_mode', this.contourMode)
 		this.contourCount = num('contour_count', this.contourCount)
-		const fieldMode = Math.round(num('field_mode', this.fieldMode))
-		this.fieldMode = fieldMode >= 0 && fieldMode <= FIELD_ROUND ? fieldMode : FIELD_SOURCES
+		this.fieldMode = clampFieldMode(num('field_mode', this.fieldMode))
 
 		if (Array.isArray(js.wave_center)) {
 			this.waveCenter = [Number(js.wave_center[0]), Number(js.wave_center[1]), Number(js.wave_center[2])]

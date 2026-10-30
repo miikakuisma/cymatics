@@ -1,8 +1,8 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
-	BESSEL_ROWS, BESSEL_WIDTH, BESSEL_X_MAX, ROUND_MAX_S, SQUARE_MAX_ORDER,
-	besselJ, besselZeros, besselTable, modeBinRanges, pickModes, plateFundamentalHz, roundModes, squareModes,
+	BESSEL_ROWS, BESSEL_WIDTH, BESSEL_X_MAX, ROUND_MAX_N, ROUND_MAX_S, SQUARE_MAX_ORDER,
+	besselAllOrders, besselRowPeaks, clampFieldMode, besselJ, besselZeros, besselTable, modeBinRanges, pickModes, plateFundamentalHz, roundModes, squareModes,
 } from '../src/engine-js/modes.js'
 
 const near = (a, b, eps, msg) => assert.ok(Math.abs(a - b) < eps, `${msg}: ${a} vs ${b}`)
@@ -18,16 +18,10 @@ test('Bessel values and zeros match the published ones', () => {
 
 test('the round plate fits inside its Bessel table', () => {
 	const modes = roundModes()
-	assert.equal(modes.length, BESSEL_ROWS * ROUND_MAX_S)
+	assert.equal(modes.length, (ROUND_MAX_N + 1) * ROUND_MAX_S)
 	assert.ok(Math.max(...modes.map((m) => m.b)) < BESSEL_X_MAX)
 	assert.equal(modes[0].a, 0)
 	near(modes[0].ratio, 1, 1e-12, 'lowest mode is the reference')
-	const table = besselTable()
-	assert.equal(table.length, BESSEL_ROWS * BESSEL_WIDTH)
-	for (let n = 0; n < BESSEL_ROWS; n++) {
-		const row = table.subarray(n * BESSEL_WIDTH, (n + 1) * BESSEL_WIDTH)
-		near(Math.max(...row.map(Math.abs)), 1, 1e-6, `row ${n} peak`)
-	}
 })
 
 test('square modes are sorted by m² + n², split into ± pairs, and skip the flat plate', () => {
@@ -72,4 +66,41 @@ test('Distance is the plate size: farther out, every mode rings lower', () => {
 	// 12-line ceiling and still fits the list.
 	const ratio = 1500 / plateFundamentalHz(0.5)
 	assert.ok(ratio > 2 * 12 ** 2 && ratio < 2 * SQUARE_MAX_ORDER ** 2, `ratio ${ratio}`)
+})
+
+test('clampFieldMode keeps 0–5 and drops the rest to sources', () => {
+	for (const v of [0, 1, 2, 3, 4, 5]) assert.equal(clampFieldMode(v), v)
+	assert.equal(clampFieldMode(6), 0)
+	assert.equal(clampFieldMode(-1), 0)
+	assert.equal(clampFieldMode(2.6), 3)
+	assert.equal(clampFieldMode('hexagon'), 0)
+	assert.equal(clampFieldMode(NaN), 0)
+})
+
+test('besselAllOrders agrees with the integral form', () => {
+	const out = new Float64Array(101)
+	for (const x of [0, 0.3, 5, 37.7, 80, 111.9]) {
+		besselAllOrders(x, 100, out)
+		for (const n of [0, 1, 7, 30, 64, 100]) near(out[n], besselJ(n, x), 1e-9, `J${n}(${x})`)
+	}
+})
+
+test('the table is BESSEL_ROWS tall, every row peaks at 1, and the first 31 rows are what they were', () => {
+	const table = besselTable()
+	const peaks = besselRowPeaks()
+	assert.equal(table.length, BESSEL_ROWS * BESSEL_WIDTH)
+	for (let n = 0; n < BESSEL_ROWS; n++) {
+		const row = table.subarray(n * BESSEL_WIDTH, (n + 1) * BESSEL_WIDTH)
+		near(Math.max(...row.map(Math.abs)), 1, 1e-6, `row ${n} peak`)
+	}
+	for (const [n, i] of [[0, 0], [3, 400], [30, 2047]]) {
+		const x = (i / (BESSEL_WIDTH - 1)) * BESSEL_X_MAX
+		near(table[n * BESSEL_WIDTH + i], besselJ(n, x) / peaks[n], 1e-6, `row ${n} at ${i}`)
+	}
+})
+
+test('the table is quick to build', () => {
+	const t = performance.now()
+	besselTable()
+	assert.ok(performance.now() - t < 40, 'besselTable took too long')
 })

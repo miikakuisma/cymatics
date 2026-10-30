@@ -24,6 +24,19 @@
 export const FIELD_SOURCES = 0
 export const FIELD_SQUARE = 1
 export const FIELD_ROUND = 2
+export const FIELD_TRIANGLE = 3
+export const FIELD_PENTAGON = 4
+export const FIELD_HEXAGON = 5
+
+// Field mode → number of sides, for the polygon plates.
+export const POLYGON_SIDES = { 3: 3, 4: 5, 5: 6 }
+
+// A saved or typed field_mode is rounded, and anything outside the known modes
+// falls back to radiating sources, which every preset can render.
+export function clampFieldMode(value) {
+	const v = Math.round(Number(value))
+	return Number.isFinite(v) && v >= FIELD_SOURCES && v <= FIELD_HEXAGON ? v : FIELD_SOURCES
+}
 
 // How many modes ring at once. A real plate under music rings dozens and turns
 // to mush; the strongest few keep a readable figure.
@@ -35,9 +48,10 @@ export const SQUARE_MAX_ORDER = 40 // up to 40 nodal lines across
 export const ROUND_MAX_N = 30 // nodal diameters
 export const ROUND_MAX_S = 20 // nodal circles
 
-// The Bessel table the round plate samples, one row per n. 2048 is the widest
+// The Bessel table the plates sample, one row per n. 2048 is the widest
 // texture WebGL2 guarantees; at ~0.05 per texel a period gets ~115 samples.
-export const BESSEL_ROWS = ROUND_MAX_N + 1
+// The round plate uses rows 0–30; the polygons need orders up to 100.
+export const BESSEL_ROWS = 101
 export const BESSEL_WIDTH = 2048
 export const BESSEL_X_MAX = 112 // just past the largest zero used (J₃₀'s 20th, ~109.5)
 
@@ -136,20 +150,72 @@ export function roundModes(maxN = ROUND_MAX_N, maxS = ROUND_MAX_S) {
 	return modes.sort((p, q) => p.ratio - q.ratio)
 }
 
-// J_n sampled over [0, BESSEL_X_MAX], each row scaled so its peak is 1: J₀
+// J_n(x) for n = 0..nMax at once, by Miller's backward recurrence: start far
+// above the order wanted with an arbitrary tiny value, recur downward (the
+// stable direction), then fix the scale with J₀ + 2·ΣJ₂ₖ = 1.
+const scratch = new Float64Array(512)
+export function besselAllOrders(x, nMax, out) {
+	out.fill(0, 0, nMax + 1)
+	if (x === 0) {
+		out[0] = 1
+		return out
+	}
+	const m = 2 * Math.ceil((Math.max(nMax, x) + 30 + 10 * Math.cbrt(x)) / 2)
+	const j = m + 2 > scratch.length ? new Float64Array(m + 2) : scratch
+	j[m + 1] = 0
+	j[m] = 1e-30
+	let sum = 0 // J₀ + 2·ΣJ₂ₖ over the unscaled values
+	for (let n = m; n > 0; n--) {
+		j[n - 1] = (2 * n / x) * j[n] - j[n + 1]
+		if (Math.abs(j[n - 1]) > 1e250) {
+			for (let k = n - 1; k <= m; k++) j[k] *= 1e-250
+			sum *= 1e-250
+		}
+		if (n - 1 > 0 && (n - 1) % 2 === 0) sum += 2 * j[n - 1]
+	}
+	sum += j[0]
+	for (let n = 0; n <= nMax; n++) out[n] = j[n] / sum
+	return out
+}
+
+// The sample position of table column i.
+const tableX = (i) => (i / (BESSEL_WIDTH - 1)) * BESSEL_X_MAX
+
+// Fill the table with raw J_n values, one column per recurrence.
+function rawTable() {
+	const data = new Float32Array(BESSEL_ROWS * BESSEL_WIDTH)
+	const col = new Float64Array(BESSEL_ROWS)
+	for (let i = 0; i < BESSEL_WIDTH; i++) {
+		besselAllOrders(tableX(i), BESSEL_ROWS - 1, col)
+		for (let n = 0; n < BESSEL_ROWS; n++) data[n * BESSEL_WIDTH + i] = col[n]
+	}
+	return data
+}
+
+// The divisor each row is scaled by: its largest |J_n| over the table. J₀
 // peaks at 1 but J₈ only near 0.3, and an unscaled table would let low-n modes
 // drown the rest.
-export function besselTable() {
-	const data = new Float32Array(BESSEL_ROWS * BESSEL_WIDTH)
-	for (let n = 0; n < BESSEL_ROWS; n++) {
-		let peak = 0
-		const row = n * BESSEL_WIDTH
-		for (let i = 0; i < BESSEL_WIDTH; i++) {
-			const v = besselJ(n, (i / (BESSEL_WIDTH - 1)) * BESSEL_X_MAX)
-			data[row + i] = v
-			peak = Math.max(peak, Math.abs(v))
+let peaks = null
+export function besselRowPeaks() {
+	if (!peaks) {
+		const data = rawTable()
+		peaks = new Float64Array(BESSEL_ROWS)
+		for (let n = 0; n < BESSEL_ROWS; n++) {
+			let peak = 0
+			for (let i = 0; i < BESSEL_WIDTH; i++) peak = Math.max(peak, Math.abs(data[n * BESSEL_WIDTH + i]))
+			peaks[n] = peak
 		}
-		for (let i = 0; i < BESSEL_WIDTH; i++) data[row + i] /= peak
+	}
+	return peaks
+}
+
+// J_n sampled over [0, BESSEL_X_MAX], each row scaled so its peak is 1.
+export function besselTable() {
+	const data = rawTable()
+	const p = besselRowPeaks()
+	for (let n = 0; n < BESSEL_ROWS; n++) {
+		const row = n * BESSEL_WIDTH
+		for (let i = 0; i < BESSEL_WIDTH; i++) data[row + i] /= p[n]
 	}
 	return data
 }
