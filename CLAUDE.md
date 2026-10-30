@@ -64,9 +64,8 @@ held sideways is still one. There the studio is three phases (`src/studio/phone-
 closed, the **picker** (`cymatics-presets` as a bottom sheet of look and preset
 thumbnails) and the **editor** (`cymatics-controls`, one control at a time under five
 tabs, `src/studio/control-tabs.js`); sideways both are a 300px column on the right.
-The cog, Tab and the nav's grid open the picker; its Adjust (in the sheet's header,
-so no screen height hides it), or the nav's sliders,
-opens the editor. `mount.js` `show()` puts each phase on screen. The plate is sized by
+The cog and Tab open the picker; its Adjust (in the sheet's header,
+so no screen height hides it) opens the editor. `mount.js` `show()` puts each phase on screen. The plate is sized by
 `fitPlate`, which measures the space the open panel leaves — upright, above the sheet
 (and below Cancel / Done in the editor); sideways, left of the column and above the
 nav — into `--plate-top`, `--plate-bottom` and `--plate-width`, again whenever the panel
@@ -75,7 +74,7 @@ say which panel is open.
 
 Adjust snapshots everything the editor can change (`src/studio/studio-snapshot.js`).
 **Only Cancel reverts it.** Every other way out keeps the edits, as Done does: the
-nav buttons, the cog, Tab, swiping the sheet's header or the editor's tabs down
+cog, Tab, swiping the sheet's header or the editor's tabs down
 (`src/studio/swipe.js`), widening to desktop, a source that loads its own
 preset (`matchSource`), and a host opening a preset (`open`). An own preset still
 being read when Adjust is tapped is dropped, not loaded after the snapshot. A tap on the plate closes nothing on a phone.
@@ -102,9 +101,8 @@ Controls that do nothing now are greyed with `irrelevantReason`
 (`control-tabs.js`) as their title — the phone hides the same ones. No Adjust,
 no Cancel: edits are live. `deskStudio()` (`src/studio/desk-studio.js`) has two
 switches: the studio (`studio-active`: the nav shows, the cog is lit) and its
-panel. The cog and Tab switch both; the nav's grid and sliders buttons switch
-only the panel and a tap on the plate closes only the panel, so the nav and its
-play button stay. `body.studio-desk` slides the panel in and moves the plate,
+panel. The cog and Tab switch both; a tap on the plate closes only the
+panel, so the nav and its play button stay. The nav holds only play. `body.studio-desk` slides the panel in and moves the plate,
 nav, source popups and fullscreen button into the stage.
 
 ## Project Structure

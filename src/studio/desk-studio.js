@@ -1,8 +1,8 @@
 // The desktop studio has two switches. `on` is the studio itself: the nav bar
 // shows and the cog is lit. `panel` is the one panel on the right, which only
 // opens while the studio is on. The cog and Tab switch the studio, panel and
-// all; the nav's grid and sliders buttons switch only the panel, and a tap on
-// the plate closes only the panel, so the nav (and its play button) stays.
+// all; a tap on the plate closes only the panel, so the nav (its play button)
+// stays.
 // `show({ on, panel })` puts a change on screen (mount.js).
 
 export function createDeskStudio({ show }) {

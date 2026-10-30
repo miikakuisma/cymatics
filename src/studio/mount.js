@@ -226,7 +226,7 @@ const launchApp = () => {
 
   // The desktop studio (desk-studio.js): `on` shows the nav and lights the
   // cog (studio-active); `panel` slides the one panel in and gives the plate
-  // the stage beside it (studio-desk), and lights both nav buttons. On a
+  // the stage beside it (studio-desk). On a
   // phone the studio is phoneStudio()'s phases instead (show() above).
   initDeskStudio(({ on, panel }) => {
     const desk = panel && !phoneQuery().matches
@@ -235,8 +235,6 @@ const launchApp = () => {
     cogBtn.classList.toggle('active', on)
     s('cymatics-presets').setAttribute('visible', panel ? 'true' : 'false')
     s('cymatics-controls').setAttribute('visible', panel ? 'true' : 'false')
-    s('[fn="presets"]')?.classList.toggle('activated', panel)
-    s('[fn="edit"]')?.classList.toggle('activated', panel)
     fitPlate(phoneStudio().phase)
   })
 
