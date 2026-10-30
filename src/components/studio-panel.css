@@ -1,0 +1,103 @@
+/* ── The studio's one panel ───────────────────────────────────────────────
+   mount.js puts cymatics-presets and cymatics-controls in div.studio-panel.
+   On a phone it is no box at all: its children are fixed sheets of their own
+   (cymatics-presets.css, cymatics-controls.css). On desktop mount.js marks it
+   .desk and it is a column on the right, Looks and Presets above the tabs;
+   body.studio-desk (desk-studio.js open) slides it in, and the plate, the nav
+   and the source popups move into the stage left of it. Not transformed
+   while open: the ⋯ menus inside it are fixed to the viewport. */
+
+:root {
+  --studio-panel: 320px;
+}
+
+.studio-panel {
+  display: contents;
+}
+
+#app .studio-panel.desk {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  width: var(--studio-panel);
+  padding-top: env(safe-area-inset-top);
+  background: #141418;
+  border-left: 1px solid #24242b;
+  color: #eee;
+  visibility: hidden;
+  transform: translateX(100%);
+  transition: transform .3s ease-out, visibility 0s linear .3s;
+}
+
+body.studio-desk #app .studio-panel.desk {
+  visibility: visible;
+  transform: none;
+  transition-delay: 0s;
+}
+
+/* Presets on top (they come second in the document, for the phone's sake),
+   taking what they need up to about half the height; the controls get the
+   rest and scroll within. */
+#app .studio-panel.desk cymatics-presets {
+  order: -1;
+  flex: 0 1 auto;
+  min-height: 0;
+  max-height: 46%;
+  overflow: hidden auto;
+  scrollbar-width: thin;
+}
+
+/* Kept while the panel slides out, so the controls do not jump up. */
+body:not(.studio-active) #app .studio-panel.desk cymatics-presets {
+  display: block !important;
+}
+
+#app .studio-panel.desk cymatics-controls {
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* The stage: what the panel leaves. The plate is the largest square in it.
+   (:has, so the phone's own transition, cymatics-component.css, stands.) */
+#app[mode="studio"]:has(.studio-panel.desk) .cymatics-wrapper {
+  transition: right .3s ease-out;
+}
+
+body.studio-desk #app[mode="studio"] .cymatics-wrapper {
+  right: var(--studio-panel);
+}
+
+body.studio-desk #app[mode="studio"] p-cymatics:not([cover="true"]) {
+  width: min(100vh, 100vw - var(--studio-panel)) !important;
+  height: min(100vh, 100vw - var(--studio-panel)) !important;
+}
+
+body.studio-desk #app[mode="studio"] p-cymatics[cover="true"] {
+  width: 100%;
+}
+
+/* The nav and the source popups centre on the stage; the fullscreen button
+   keeps to its top right corner. */
+body.studio-desk #app[mode="studio"] p-nav {
+  left: calc((100% - var(--studio-panel)) / 2);
+}
+
+body.studio-desk #app p-audio .options {
+  left: calc((100% - var(--studio-panel)) / 2 - 130px);
+}
+
+body.studio-desk #app:has(.simple-ui) p-audio .options,
+body.studio-desk #app p-audio .osc-overlay {
+  left: calc((100% - var(--studio-panel)) / 2);
+}
+
+body.studio-desk .simple-fullscreen-btn {
+  right: calc(var(--studio-panel) + 12px + env(safe-area-inset-right));
+}
