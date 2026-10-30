@@ -3,8 +3,10 @@
 **Another Dimension of Music** — a web app that visualizes how sound waves
 affect a fluid surface in real time.
 
-Audio input (files, radio streams, microphone) drives a WebGL2 simulation that
-renders dynamic cymatic wave patterns on an HTML5 canvas.
+Audio input (files, radio streams, microphone, or a built-in tone generator)
+drives a WebGL2 simulation that renders dynamic cymatic wave patterns on an
+HTML5 canvas, from free-flowing ripples to the Chladni figures of a vibrating
+plate.
 
 **Try it at [cymatics.app](https://cymatics.app).**
 
@@ -20,7 +22,8 @@ runtime dependencies. It needs a browser with WebGL2.
 
 ## Prerequisites
 
-[Node.js](https://nodejs.org/) 18 or newer. That's it.
+[Node.js](https://nodejs.org/) 24, the version deployments build with
+(`engines` in `package.json`). Node 22 works for local development too.
 
 ## Quick Start
 
@@ -30,6 +33,57 @@ npm run dev
 ```
 
 The app will be available at `http://localhost:3000`.
+
+## Using the studio
+
+Press play and pick a source: a file (or drag one onto the page), the
+microphone, a radio station, or the **Tone Generator**. Open the controls with
+the sliders button at the bottom.
+
+### Fields: ripples or a plate
+
+**Field**, at the top of the Cymatics section, picks what the sound excites.
+
+- **No plate** (the default): ripples radiate from a set of points, chosen
+  under **Formation**, and interfere. Each frequency band has its own
+  wavelength, so the picture flows with the music. Every factory preset uses
+  this.
+- **Square plate** and **Round plate**: the sound rings the plate's own
+  resonant modes, the standing waves of a real vibrating plate. This is what
+  Ernst Chladni saw when he bowed a metal plate scattered with sand: the sand
+  is thrown off the moving parts and collects along the *nodal lines*, which
+  stay still. Presets drawn as lines show just those nodal lines; glowing
+  presets show the whole vibrating surface.
+
+On a plate, every pitch has its own figure. Higher notes ring higher modes,
+which have more lines. A few controls work differently:
+
+- **Distance** is the size of the plate. Push it right for a bigger plate: the
+  same sound then rings a finer, more intricate figure. A whistle at full
+  Distance fills the round plate with dozens of spokes and rings.
+- **Faraday Threshold** sets how loud a frequency must be before the plate
+  responds. Raise it so figures form on the strong notes and fade between them.
+- **Release** sets how long a figure holds before the next takes over.
+- **Freq Detail**, **Contour Detail** and **Formation** shape the ripples only,
+  so they are greyed out while a plate is chosen.
+- **Liquid** works as with the ripples. **Water** on a **Round plate** looks like
+  the sound playing through a dish of water.
+
+The figures come from the textbook models: Chladni's square plate with free
+edges, `cos(nπx)cos(mπy) ± cos(mπx)cos(nπy)`, and Bessel modes `Jₙ(αr)cos(nθ)`
+for the round plate. The engine README has the details.
+
+### Tone generator
+
+**Tone Generator** plays one steady tone, to show what a single frequency does
+to the plate. Drag the slider from 20 Hz to 10 kHz and pick **sine**,
+**square**, **triangle** or **saw**. A sine rings the cleanest figure. The
+other waveforms add harmonics, so several modes ring at once. The tone plays
+quietly through your speakers, and **Stop** or the pause button ends it.
+
+Good places to start: a **Round plate** at full **Distance** with a sine, swept
+slowly upward; or a **Square plate**, where neighbouring frequencies flip
+between quite different figures.
 
 ## Commands
 
@@ -79,7 +133,7 @@ cymatics/
 ├── test/                 # node --test unit tests
 └── src/
     ├── index.js          # app bootstrap, PWA, drag-and-drop
-    ├── controls.js       # the 29 controllable parameters
+    ├── controls.js       # every control in the studio's panel
     ├── default-presets.js
     ├── storage.js        # IndexedDB CRUD for user scenes
     ├── mpeg.js           # MPEG frame parsing for radio streams
@@ -89,6 +143,7 @@ cymatics/
     └── engine-js/        # the engine — WebGL2, see its README
         ├── index.js      # entry point, render loop, command API
         ├── cymatics.js   # wave field
+        ├── modes.js      # plate modes: Bessel functions, mode picking
         ├── liquidsim.js  # fluid solver
         ├── renderer.js   # PBR / emissive rendering
         ├── view.js       # render path selection and pass sequencing
@@ -116,12 +171,13 @@ cymatics/
 │  Web UI (Vite + Web Components)                      │
 │  - Audio capture (Web Audio API)                     │
 │  - Controls, presets, EQ                             │
-│  - File/stream/microphone input                      │
+│  - File/stream/microphone/tone input                 │
 └──────────────────────────────────────────────────────┘
 ```
 
 Essentially all the work happens on the GPU. Per frame the JS averages ~1,030
-FFT bins into 4 bands, sets uniforms, and issues the draw calls.
+FFT bins into 4 bands (or, on a plate, picks the strongest few modes), sets
+uniforms, and issues the draw calls.
 
 ## Engine API
 
@@ -149,6 +205,9 @@ an audio source or a user gesture:
 ```
 http://localhost:3000/engine-test.html?mode=emissive   # default look, 2 passes
 http://localhost:3000/engine-test.html?mode=pbr        # fluid + PBR, ~52 passes
+http://localhost:3000/engine-test.html?mode=emissive&field=round&distance=0.5
+                                                       # a plate, driven by a tone
+                                                       # gliding 40 Hz → 5 kHz and back
 ```
 
 It reports fps, frame time, and which float texture formats the browser
@@ -170,6 +229,10 @@ license it to others under commercial terms.
 
 The rendering engine is a JavaScript port of C++ engine written
 by **Tuomo Hirvonen**, which first powered Cymatics as WebAssembly.
+
+The plate fields follow Olivier Giulieri's
+[evoluteur/cymatics](https://github.com/evoluteur/cymatics) (MIT), which plays
+Chladni figures from the wave equation.
 
 The knob control is adapted from [precision-inputs](https://github.com/jhnsnc/precision-inputs)
 by Chris Johnson (MIT). The dither texture is from Christoph Peters'
