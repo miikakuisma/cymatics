@@ -118,6 +118,25 @@ export class PuhdeEqualizer extends HTMLElement {
 
   }
 
+  // Band gains in equalizerDefaults order. Read from the panel, so they are
+  // there before audio has made the filters.
+  get gains() {
+    return this.equalizer.map((band) => band.value)
+  }
+
+  setGains(gains) {
+    this.equalizer = this.equalizer.map((band, i) => {
+      const value = gains[i] ?? band.value
+      const filter = window[`eq${band.frequency}`]
+      if (filter) filter.gain.value = value
+      return { ...band, value }
+    })
+    const container = this.querySelector('.bands-container')
+    if (!container) return
+    container.innerHTML = ''
+    this.renderBands()
+  }
+
   resetAll() {
     this.equalizer.forEach((band) => {
       this.updateBand({

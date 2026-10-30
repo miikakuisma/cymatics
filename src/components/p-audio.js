@@ -192,6 +192,7 @@ export class PuhdeAudio extends HTMLElement {
     this.streamCopyDead = false   // the analyser's copy has failed or ended
     this.streamElementDead = false // the element has failed or ended
     this.nextBeatIndex = 0        // pointer into beatGrid
+    this.inputGain = 1            // Input Sensitivity, kept across sources
   }
 
   async connectedCallback() {
@@ -1152,9 +1153,12 @@ export class PuhdeAudio extends HTMLElement {
     send()
   }
 
+  // Recorded even before audio starts, so the next source's gain node picks it
+  // up. The node's own context: this.context is gone once a source stops.
   setInputGain(value) {
+    this.inputGain = value
     if (this.inputGainNode) {
-      this.inputGainNode.gain.setValueAtTime(value, this.context.currentTime)
+      this.inputGainNode.gain.setValueAtTime(value, this.inputGainNode.context.currentTime)
     }
   }
 
@@ -1169,7 +1173,7 @@ export class PuhdeAudio extends HTMLElement {
 
     // Input gain node for sensitivity control (visualizer path only)
     this.inputGainNode = audioContext.createGain()
-    this.inputGainNode.gain.setValueAtTime(1, audioContext.currentTime)
+    this.inputGainNode.gain.setValueAtTime(this.inputGain, audioContext.currentTime)
 
     // Split audio into two independent paths:
     // 1) Speakers: source → destination (clean, unprocessed audio)

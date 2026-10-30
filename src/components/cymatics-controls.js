@@ -729,6 +729,10 @@ export class PuhdeCymaticsControls extends HTMLElement {
     if (control.group && control.value) {
       const stateVal = engine.state[control.group]?.[control.value]
       slider.setAttribute('value', (stateVal != null ? stateVal : (control.defaultValue ?? 1)) * 100)
+    } else if (control.name === 'input_sensitivity') {
+      // Not engine state: the panel is rebuilt on every preset load, and the
+      // gain carries on through it.
+      slider.setAttribute('value', (s('p-audio')?.inputGain ?? 1) * 100)
     } else {
       slider.setAttribute('value', (control.defaultValue ?? 1) * 100)
     }
