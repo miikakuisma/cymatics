@@ -16,12 +16,21 @@ export function isSwipeDown(dx, dy) {
 // touch-action: pan-x in the CSS, so a vertical drag reaches here instead of
 // being taken by the browser.
 export function onSwipeDown(root, handle, fn) {
+	// The swipe being followed. A new press drops it: its release may have
+	// been lost outside the window, and must not close anything later.
+	let pending = null
+	const drop = () => {
+		if (!pending) return
+		removeEventListener('pointerup', pending, true)
+		removeEventListener('pointercancel', pending, true)
+		pending = null
+	}
 	root.addEventListener('pointerdown', (down) => {
+		drop()
 		if (!down.isPrimary || !down.target.closest?.(handle)) return
 		const end = (e) => {
 			if (e.pointerId !== down.pointerId) return
-			removeEventListener('pointerup', end, true)
-			removeEventListener('pointercancel', end, true)
+			drop()
 			if (e.type !== 'pointerup' || !isSwipeDown(e.clientX - down.clientX, e.clientY - down.clientY)) return
 			const swallow = (click) => {
 				click.preventDefault()
@@ -31,6 +40,7 @@ export function onSwipeDown(root, handle, fn) {
 			setTimeout(() => removeEventListener('click', swallow, true))
 			fn()
 		}
+		pending = end
 		addEventListener('pointerup', end, true)
 		addEventListener('pointercancel', end, true)
 	})
