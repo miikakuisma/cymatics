@@ -150,6 +150,7 @@ export class Program {
 	vec4(name, x, y, z, w) { const l = this.loc(name); if (l) this.gl.uniform4f(l, x, y, z, w); return this }
 	vec3v(name, arr) { const l = this.loc(name); if (l) this.gl.uniform3fv(l, arr); return this }
 	vec2v(name, arr) { const l = this.loc(name); if (l) this.gl.uniform2fv(l, arr); return this }
+	vec4v(name, arr) { const l = this.loc(name); if (l) this.gl.uniform4fv(l, arr); return this }
 	floatv(name, arr) { const l = this.loc(name); if (l) this.gl.uniform1fv(l, arr); return this }
 	mat4(name, arr) { const l = this.loc(name); if (l) this.gl.uniformMatrix4fv(l, false, arr); return this }
 

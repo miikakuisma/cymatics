@@ -22,6 +22,9 @@
 		  /engine-test.html?mode=water      water surface, 3 passes
 		  /engine-test.html?mode=pbr        fluid + PBR, ~52 passes
 
+		  &field=square|round   plate modes instead of radiating sources, driven
+		                        by a tone that sweeps up through the spectrum
+
 		See element-test.html for the <cymatics-view> element.
 	-->
 	<div id="wrap">
@@ -37,13 +40,18 @@
 		const MODE = ['pbr', 'liquid', 'water'].includes(REQUESTED) ? REQUESTED : 'emissive'
 		const IS_LIQUID = MODE === 'liquid' || MODE === 'water'
 		const BINS = 1024
+		const FIELD = { square: 1, round: 2 }[new URLSearchParams(location.search).get('field')] || 0
+		// &distance=0.5: view_scale, which on a plate is its size (finer figures).
+		const DISTANCE = Number(new URLSearchParams(location.search).get('distance')) || null
 
 		try {
 			const engine = new CymaticsEngine(document.getElementById('canvas'))
 			window.__engine = engine
 
 			engine.command('set cymatics ' + JSON.stringify(
-				MODE === 'emissive' ? { contour_mode: 1, contour_count: 12 } : { contour_mode: 0 }))
+				{ ...(MODE === 'emissive' ? { contour_mode: 1, contour_count: 12 } : { contour_mode: 0 }),
+					field_mode: FIELD, faraday_threshold: FIELD ? 0.3 : 0, freq_release: FIELD ? 0.85 : 0.5,
+					...(DISTANCE ? { view_scale: DISTANCE } : {}) }))
 			engine.command('set renderer ' + JSON.stringify({
 				emissive_mode: MODE === 'emissive',
 				liquid_mode: IS_LIQUID,
@@ -73,11 +81,23 @@
 			let t = 0
 			const feed = () => {
 				t += 1 / 60
-				for (let i = 0; i < BINS; i++) {
-					const f = i / BINS
-					spectrum[i] = Math.min(1,
-						Math.exp(-f * 60) * (0.6 + 0.4 * Math.sin(t * 3)) +
-						Math.exp(-Math.pow((f - 0.08) * 25, 2)) * 0.5)
+				if (FIELD) {
+					// A tone gliding 40 Hz -> 5 kHz and back every 40 s, over a
+					// quiet floor, so the plate steps through its modes.
+					const binHz = 44100 / 2048
+					const hz = 40 * Math.pow(125, 0.5 - 0.5 * Math.cos(t * Math.PI / 20))
+					const peak = hz / binHz
+					for (let i = 0; i < BINS; i++) {
+						spectrum[i] = 0.25 + 0.65 * Math.exp(-Math.pow((i - peak) / Math.max(1, peak * 0.03), 2))
+					}
+					window.__harness.hz = hz
+				} else {
+					for (let i = 0; i < BINS; i++) {
+						const f = i / BINS
+						spectrum[i] = Math.min(1,
+							Math.exp(-f * 60) * (0.6 + 0.4 * Math.sin(t * 3)) +
+							Math.exp(-Math.pow((f - 0.08) * 25, 2)) * 0.5)
+					}
 				}
 				engine.pushAudioSpectrum(spectrum, BINS, 44100)
 				requestAnimationFrame(feed)
@@ -90,6 +110,12 @@
 				const s = engine.stats
 				log.textContent = [
 					`mode      ${MODE}`,
+					...(FIELD ? [`field     ${FIELD === 1 ? 'square' : 'round'} plate`,
+						`tone      ${window.__harness.hz.toFixed(0)} Hz`,
+						`modes     ${[...Array(engine.view.cymatics.modeCount).keys()].map((j) => {
+							const c = engine.view.cymatics
+							return `${c.modeParams[j * 4]},${+c.modeParams[j * 4 + 1].toFixed(2)}`
+						}).join('  ')}`] : []),
 					`fps       ${s.fps.toFixed(1)}`,
 					`frame ms  ${s.frameMs.toFixed(2)}`,
 					`frames    ${s.frames}`,

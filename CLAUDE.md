@@ -64,7 +64,7 @@ The repository root *is* the app — Vite, vanilla JS web components, and the en
 - `src/element/` — `<cymatics-view>`, the engine as a web component for other pages (below).
 - `src/components/` — UI web components and the audio pipeline.
 - `docs/` — design notes.
-- `engine-test.html` — dev-only harness that drives the engine with a synthetic spectrum (`?mode=emissive|pbr`). Not in the production build.
+- `engine-test.html` — dev-only harness that drives the engine with a synthetic spectrum (`?mode=emissive|pbr`, `&field=square|round`). Not in the production build.
 
 ## Architecture
 
@@ -153,6 +153,16 @@ element is sounding the station: a station opens by sending several seconds at
 once, and left alone that backlog becomes a standing two-to-three second gap
 between the music and the picture.
 
+### Fields
+
+`field_mode` (the studio's **Field**) picks what the music excites: **0**
+radiating sources, the default every existing preset uses; **1** a square plate
+and **2** a round plate, ringing their own standing-wave modes (Chladni
+figures), from `src/engine-js/modes.js`. On a plate, Distance (`view_scale`) is
+the plate's size and so its level of detail, contour mode draws only nodal
+lines, and Freq Detail, Contour Detail and Formation do nothing — the studio
+greys them out (`sourcesOnly` in `controls.js`). Details in the engine README.
+
 ### Render paths
 
 `view.js` picks one of four, in this order:
@@ -191,6 +201,7 @@ wants a considerably larger value.
 |------|---------|
 | `src/engine-js/index.js` | Entry point, render loop, command API, audio/texture ingest |
 | `src/engine-js/cymatics.js` | Wave field: envelope follower + uniform setup |
+| `src/engine-js/modes.js` | Plate modes: Bessel functions, mode lists, picking |
 | `src/engine-js/liquidsim.js` | Ping-pong Jacobi pressure solver |
 | `src/engine-js/renderer.js` | PBR/refraction uniforms, emissive colour state |
 | `src/engine-js/view.js` | Render path selection, pass sequencing |

@@ -173,7 +173,14 @@ export class PuhdeCymaticsControls extends HTMLElement {
     }
 
     this.controls.map(control => {
-      renderControl(control, this.querySelector('.controls .group.' + control.groupSlot))
+      const target = this.querySelector('.controls .group.' + control.groupSlot)
+      if (!target) return
+      const before = target.children.length
+      renderControl(control, target)
+      // Everything the control added, including a Dynamic panel beneath it.
+      if (control.sourcesOnly) {
+        for (const el of [...target.children].slice(before)) el.dataset.sourcesOnly = ''
+      }
     })
 
     if (this.mode === 'player') {
@@ -223,6 +230,7 @@ export class PuhdeCymaticsControls extends HTMLElement {
   updateControlsFromEngineState() {
     const formation = matchFormation(engine.state.cymaticsConfig.poles)
     if (formation) s('pole-config').setAttribute('selected', formation)
+    this.applyFieldMode()
     // const convertColorToHex = (color) => {
 		// 	const hex = color.map(c => Math.round(c * 255).toString(16).padStart(2, '0')).join('')
 		// 	return `#${hex}`
@@ -233,6 +241,19 @@ export class PuhdeCymaticsControls extends HTMLElement {
     //   const lightHex = convertColorToHex(light.color)
     //   s('xy-control[controls="lights"]').setAttribute('color', lightHex)
     // })
+  }
+
+  // A plate field rings its own modes, so the controls that shape the radiating
+  // sources do nothing there. Grey them out rather than leave them silently
+  // dead. `inert`, not `disabled`: the Dynamic checkboxes already drive their
+  // sliders' `disabled`, and re-enabling would clobber that.
+  applyFieldMode() {
+    const plate = (engine.state.cymaticsConfig.field_mode ?? 0) !== 0
+    for (const el of this.querySelectorAll('[data-sources-only]')) {
+      el.inert = plate
+      el.style.opacity = plate ? '0.35' : ''
+      el.title = plate ? 'Not used by plate fields' : ''
+    }
   }
 
   createComponent(control, targetContainer) {
@@ -478,6 +499,7 @@ export class PuhdeCymaticsControls extends HTMLElement {
       const select = component.querySelector('select')
       select.onchange = () => {
         s('p-cymatics').updateControl(control.name, parseInt(select.value))
+        if (control.name === 'field_mode') this.applyFieldMode()
       }
       targetContainer.appendChild(component)
     }

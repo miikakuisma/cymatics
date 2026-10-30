@@ -25,6 +25,25 @@ export const controls = [
     },
   },
 
+  // Field: what the music excites. Sources radiate ripples from the Formation's
+  // poles; the plates ring their own standing-wave modes (src/engine-js/modes.js).
+  // On a plate, Distance is the plate's size, so it sets how fine the figures
+  // get. Controls marked `sourcesOnly` do nothing on a plate and are greyed out
+  // while one is chosen.
+  {
+    groupSlot: 'cymatics',
+    group: 'cymaticsConfig',
+    component: 'select',
+    label: 'Field',
+    name: 'field_mode',
+    value: 'field_mode',
+    defaultValue: 0,
+    options: [
+      { value: 0, label: 'Sources' },
+      { value: 1, label: 'Square plate' },
+      { value: 2, label: 'Round plate' },
+    ],
+  },
   {
     groupSlot: 'cymatics',
     group: 'cymaticsConfig',
@@ -54,6 +73,7 @@ export const controls = [
     group: 'cymaticsConfig',
     label: 'Freq Detail',
     name: 'freq_detail_scale',
+    sourcesOnly: true,
     min: 0.1,
     max: 10,
     step: 0.1,
@@ -80,6 +100,7 @@ export const controls = [
     group: 'cymaticsConfig',
     label: 'Contour Detail',
     name: 'contour_count',
+    sourcesOnly: true,
     min: 2,
     max: 32,
     step: 1,
@@ -93,6 +114,7 @@ export const controls = [
     group: 'cymaticsConfig',
     label: 'Formation',
     component: 'pole-config',
+    sourcesOnly: true,
     selected: 'pentagon',
   },
   {

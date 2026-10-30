@@ -9,8 +9,12 @@
 // shaders/cymatics_freq_bands.fsh and runs on the GPU. This class is the
 // envelope follower plus the uniform setup — the entire per-frame CPU cost.
 
-import { Fbo, Program, attrToValue, FLOAT32 } from './glutil.js'
+import { Fbo, Program, attrToValue, createColorTexture, FLOAT32 } from './glutil.js'
 import { shader } from './shaders.js'
+import {
+	BESSEL_ROWS, BESSEL_WIDTH, BESSEL_X_MAX, FIELD_ROUND, FIELD_SOURCES, MAX_ACTIVE_MODES,
+	besselTable, modeBinRanges, pickModes, plateFundamentalHz, roundModes, squareModes,
+} from './modes.js'
 
 const BAND_MIN_HZ = [20, 80, 250, 2000]
 const BAND_MAX_HZ = [80, 250, 2000, 20000]
@@ -107,6 +111,18 @@ export class Cymatics {
 		this.freqTime = 0.0
 		this.freqSpectrumMode = false
 
+		// Plate modes, off by default: 0 keeps the radiating sources every
+		// preset was tuned on. See modes.js.
+		this.fieldMode = FIELD_SOURCES
+		this.plates = {} // field mode -> { modes, env, ranges, rangesKey }
+		this.modePick = new Float32Array(MAX_ACTIVE_MODES * 2)
+		this.modeParams = new Float32Array(MAX_ACTIVE_MODES * 4)
+		this.modeAmp = new Float32Array(MAX_ACTIVE_MODES)
+		this.modeAmpScaled = new Float32Array(MAX_ACTIVE_MODES)
+		this.modeCount = 0
+		this.besselTex = null
+		this.placeholderTex = null
+
 		this.bandAmp = new Float32Array(4)
 		this.bandK = new Float32Array(4)
 		// Scratch buffers so the per-frame uniform upload allocates nothing.
@@ -177,12 +193,76 @@ export class Cymatics {
 			}
 		}
 
+		if (this.fieldMode !== FIELD_SOURCES) this.updateModes(freqData, numBins, sampleRate, attack, decay)
+
 		// Overwrites the dispersion-derived wavenumbers every frame.
 		for (let b = 0; b < 4; b++) {
 			this.bandK[b] = Math.log2(BAND_CENTER_HZ[b] / 20.0) * 5.0 * this.freqDetailScale
 		}
 
 		this.freqSpectrumMode = true
+	}
+
+	plate(fieldMode) {
+		let plate = this.plates[fieldMode]
+		if (!plate) {
+			const modes = fieldMode === FIELD_ROUND ? roundModes() : squareModes()
+			plate = { modes, env: new Float32Array(modes.length), ranges: null, rangesKey: '' }
+			this.plates[fieldMode] = plate
+		}
+		return plate
+	}
+
+	// Each mode follows the spectrum a semitone either side of its own
+	// frequency, through the same envelope as the bands; the strongest few ring.
+	updateModes(freqData, numBins, sampleRate, attack, decay) {
+		const plate = this.plate(this.fieldMode)
+		// Distance is the plate's size: it sets which mode each note reaches.
+		const fundamentalHz = plateFundamentalHz(this.viewScale)
+		const key = `${fundamentalHz}|${sampleRate}|${numBins}`
+		if (plate.rangesKey !== key) {
+			plate.ranges = modeBinRanges(plate.modes, fundamentalHz, sampleRate, numBins)
+			plate.rangesKey = key
+		}
+		const { env, ranges, modes } = plate
+		for (let i = 0; i < modes.length; i++) {
+			const lo = ranges[i * 2]
+			const hi = ranges[i * 2 + 1]
+			let target = 0
+			for (let b = lo; b <= hi; b++) if (freqData[b] > target) target = freqData[b]
+			if (target > env[i]) env[i] += attack * (target - env[i])
+			else env[i] *= decay
+		}
+
+		const count = pickModes(env, this.faradayThreshold, MAX_ACTIVE_MODES, this.modePick)
+		for (let j = 0; j < count; j++) {
+			const mode = modes[this.modePick[j * 2]]
+			this.modeParams[j * 4 + 0] = mode.a
+			this.modeParams[j * 4 + 1] = mode.b
+			// Breathing rate, rad/s: higher modes breathe faster, as ripples do.
+			this.modeParams[j * 4 + 2] = 1.5 + 0.4 * Math.sqrt(mode.ratio)
+			this.modeParams[j * 4 + 3] = mode.mix
+			this.modeAmp[j] = this.modePick[j * 2 + 1]
+		}
+		for (let j = count; j < MAX_ACTIVE_MODES; j++) this.modeAmp[j] = 0
+		this.modeCount = count
+	}
+
+	ensureBesselTexture() {
+		if (this.besselTex) return this.besselTex
+		const gl = this.ctx.gl
+		const tex = gl.createTexture()
+		gl.bindTexture(gl.TEXTURE_2D, tex)
+		gl.texImage2D(gl.TEXTURE_2D, 0, gl.R32F, BESSEL_WIDTH, BESSEL_ROWS, 0, gl.RED, gl.FLOAT, besselTable())
+		// Read with texelFetch and interpolated in the shader: R32F is not
+		// filterable everywhere.
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST)
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST)
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)
+		gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
+		gl.bindTexture(gl.TEXTURE_2D, null)
+		this.besselTex = tex
+		return tex
 	}
 
 	render() {
@@ -233,6 +313,25 @@ export class Cymatics {
 		p.float('uTime', this.freqTime)
 		p.float('contourMode', this.contourMode)
 		p.float('contourCount', this.contourCount)
+
+		p.int('fieldMode', this.fieldMode)
+		// The sampler must always point at something. Left alone it reads unit
+		// 0, which can hold this pass's own render target, and WebGL refuses
+		// that draw as a feedback loop (INVALID_OPERATION, blank field).
+		if (this.fieldMode === FIELD_ROUND) {
+			p.bindTexture('besselTable', this.ensureBesselTexture())
+		} else {
+			if (!this.placeholderTex) this.placeholderTex = createColorTexture(this.ctx, 0, 0, 0)
+			p.bindTexture('besselTable', this.placeholderTex)
+		}
+		if (this.fieldMode !== FIELD_SOURCES) {
+			p.int('modeCount', this.modeCount)
+			// Gain applies to the picked weights, as it does to the bands.
+			for (let j = 0; j < MAX_ACTIVE_MODES; j++) this.modeAmpScaled[j] = this.modeAmp[j] * this.audioAmplifyMul
+			p.floatv('modeAmp[0]', this.modeAmpScaled)
+			p.vec4v('modeParams[0]', this.modeParams)
+			p.float('besselXMax', BESSEL_X_MAX)
+		}
 		this.freqTime += 1.0 / 60.0
 
 		this.ctx.drawQuad()
@@ -258,6 +357,8 @@ export class Cymatics {
 		this.freqDetailScale = num('freq_detail_scale', this.freqDetailScale)
 		this.contourMode = num('contour_mode', this.contourMode)
 		this.contourCount = num('contour_count', this.contourCount)
+		const fieldMode = Math.round(num('field_mode', this.fieldMode))
+		this.fieldMode = fieldMode >= 0 && fieldMode <= FIELD_ROUND ? fieldMode : FIELD_SOURCES
 
 		if (Array.isArray(js.wave_center)) {
 			this.waveCenter = [Number(js.wave_center[0]), Number(js.wave_center[1]), Number(js.wave_center[2])]
@@ -287,11 +388,14 @@ export class Cymatics {
 			freq_detail_scale: this.freqDetailScale,
 			contour_mode: this.contourMode,
 			contour_count: this.contourCount,
+			field_mode: this.fieldMode,
 		}
 	}
 
 	dispose() {
 		if (this.program) this.program.dispose()
 		if (this.fbo) this.fbo.dispose()
+		if (this.besselTex) this.ctx.gl.deleteTexture(this.besselTex)
+		if (this.placeholderTex) this.ctx.gl.deleteTexture(this.placeholderTex)
 	}
 }

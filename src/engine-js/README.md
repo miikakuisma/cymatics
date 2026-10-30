@@ -12,6 +12,7 @@ sync.
 |---|---|
 | `index.js` | Entry point, render loop, command API, audio/texture ingest |
 | `cymatics.js` | Wave field — envelope follower + uniform setup |
+| `modes.js` | Plate modes: Bessel functions, mode lists, picking (pure, unit-tested) |
 | `liquidsim.js` | Ping-pong Jacobi pressure solver |
 | `renderer.js` | PBR/refraction uniforms, emissive colour state |
 | `view.js` | Render path selection, pass sequencing |
@@ -38,6 +39,48 @@ into 4 bands, set uniforms, draw. Everything else is on the GPU.
    never run.
 4. **PBR** — fluid sim → temporal blend → PBR shading. ~52 passes.
 
+## Fields
+
+`field_mode` picks what the music excites. It changes the wave field only, so
+every render path above draws it.
+
+- **0, sources** (default) — circular ripples, `cos(k·r − ωt)`, radiating from
+  the centre and the poles, one wavenumber per band. Every preset before plate
+  fields renders through this unchanged.
+- **1, square plate** and **2, round plate** — standing waves: the plate's own
+  resonant modes, picked by the music. Square: `cos(nπx)cos(mπy) ±
+  cos(mπx)cos(nπy)`, Chladni's free plate, ringing ∝ m² + n². Round:
+  `Jₙ(α·r)·cos(nθ)`, with α the s-th zero of Jₙ, ringing ∝ α². Adapted from
+  [evoluteur/cymatics](https://github.com/evoluteur/cymatics) (MIT).
+
+Each mode follows the spectrum a semitone either side of its frequency through
+the same envelope as the bands; `faraday_threshold` gates them, and the
+strongest four ring, weighted so the loudest carries the figure. A plate's
+shape only breathes (75–100%), never flattens, so its nodal lines stay put. In
+contour mode a plate draws only its nodal lines, where sand would gather —
+`contour_count` is unused there, as are `freq_detail_scale` and the poles.
+
+`view_scale` (Distance) is the plate's size: the lowest mode is 40 Hz at the
+factory 0.1, and a plate twice the size rings every mode two octaves lower
+(f ∝ 1/L²), so the same note lands on a finer figure. The lists reach 40 lines
+across (square) and 30 diameters × 20 circles (round), which a whistle at full
+Distance still fits inside.
+
+Worth knowing:
+
+- **Both halves of each square pair are listed.** A real plate splits the
+  degenerate pair, the − and + figures ringing at slightly different pitches;
+  the + sits a third of a semitone up here. Listing only − puts the diagonal on
+  every figure, since it is a nodal line of all of them.
+- **The Bessel table is computed, not tabulated.** `besselJ` integrates
+  `cos(nτ − x·sin τ)` by the trapezoid rule, which converges spectrally for this
+  integrand and stays accurate where the power series cancels terms of ~eˣ. It
+  matches an 80-digit series to 1e-15 over the whole table. Building it costs
+  ~0.1 s, once, the first time the round plate is chosen.
+- **The sampler is bound even when unused.** An unbound `besselTable` reads
+  unit 0, which can hold the field's own render target; WebGL refuses that draw
+  as a feedback loop and the field goes blank on every path, sources included.
+
 ## Testing without audio
 
 `/engine-test.html` on the dev server drives the engine with a synthetic
@@ -50,6 +93,9 @@ gesture:
 /engine-test.html?mode=water
 /engine-test.html?mode=pbr
 ```
+
+Add `&field=square` or `&field=round` to drive a plate with a tone gliding
+40 Hz → 5 kHz and back, and `&distance=0.5` for the largest plate.
 
 Note that `requestAnimationFrame` is throttled whenever the tab is not
 foregrounded, so `stats.fps` reads zero under automation. To measure, drive

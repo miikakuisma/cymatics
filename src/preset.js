@@ -11,7 +11,8 @@ const SECTIONS = ['renderer', 'cymatics', 'liquid']
 const NUMBERS = {
 	renderer: ['emissive_strength', 'final_mul', 'final_gamma'],
 	cymatics: ['view_scale', 'faraday_threshold', 'freq_response_speed', 'freq_release', 'freq_detail_scale',
-		'contour_mode', 'contour_count', 'audio_amplify_mul', 'wave_distance_scale'],
+		'contour_mode', 'contour_count', 'audio_amplify_mul', 'wave_distance_scale',
+		'field_mode'],
 	liquid: [],
 }
 const LEGACY = ['reflectionImage', 'refractionImage']
