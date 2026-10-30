@@ -21,6 +21,9 @@ export function currentPreset() {
 	}
 }
 
+// Set by the first source pick of this launch (matchSource).
+let sourceMatched = false
+
 export class PuhdeCymaticsPresets extends HTMLElement {
 
 	constructor() {
@@ -301,12 +304,15 @@ export class PuhdeCymaticsPresets extends HTMLElement {
 		this.listPresets()
 	}
 
-	// Picking a source brings its kind of field: the tone generator is for
-	// finding single-frequency figures, so it opens on the Round Plate; music,
-	// radio, the mic and files open on No Plate. Only a switch of kind loads
-	// anything — a tone on the Square Plate stays there, and a song over the
-	// user's own ripple preset keeps it.
+	// The first source picked after launch brings its kind of field: the tone
+	// generator is for finding single-frequency figures, so it opens on the
+	// Round Plate; music, radio, the mic and files open on No Plate. Only a
+	// switch of kind loads anything — a tone on the Square Plate stays there,
+	// and a song over the user's own ripple preset keeps it. Later picks keep
+	// whatever is on the plate: by then the user has chosen it.
 	matchSource(source) {
+		if (sourceMatched) return
+		sourceMatched = true
 		const wantPlate = source === 'tone'
 		const onPlate = (engine.state.cymaticsConfig.field_mode ?? 0) !== 0
 		if (wantPlate === onPlate) return

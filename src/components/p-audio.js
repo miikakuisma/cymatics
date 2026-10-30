@@ -320,7 +320,7 @@ export class PuhdeAudio extends HTMLElement {
 
       this.innerHTML = html
 
-      // Each pick also brings its kind of field (matchSource). Only here and
+      // The first pick of a launch also brings its kind of field (matchSource). Only here and
       // on a drop: Music followed at launch keeps the preset the app opened.
       this.querySelector('button[fn="external"]')?.addEventListener('click', () => {
         matchSource('music')
