@@ -25,8 +25,8 @@ export const controls = [
     },
   },
 
-  // Field: what the music excites. Sources radiate ripples from the Formation's
-  // poles; the plates ring their own standing-wave modes (src/engine-js/modes.js).
+  // Field: what the music excites. No plate (0) radiates ripples from the
+  // Formation's poles; the plates ring their own standing-wave modes (src/engine-js/modes.js).
   // On a plate, Distance is the plate's size, so it sets how fine the figures
   // get. Controls marked `sourcesOnly` do nothing on a plate and are greyed out
   // while one is chosen.
@@ -39,7 +39,7 @@ export const controls = [
     value: 'field_mode',
     defaultValue: 0,
     options: [
-      { value: 0, label: 'Sources' },
+      { value: 0, label: 'No plate' },
       { value: 1, label: 'Square plate' },
       { value: 2, label: 'Round plate' },
     ],
