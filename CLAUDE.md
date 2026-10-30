@@ -87,6 +87,24 @@ live plate keeps its frame rate and cached in their own IndexedDB database,
 `CymaticsThumbs` (`thumb-cache.js`). The sheet's and editor's parts are built in
 `src/components/presets-sheet.js` and `phone-editor.js`.
 
+## Desktop studio
+
+Anything that is not a phone gets one panel on the right (320px, `--studio-panel`)
+and the plate takes the stage left of it. `mount.js` puts `cymatics-presets` and
+`cymatics-controls` in one `div.studio-panel` — `display: contents` on a phone,
+the fixed column when marked `.desk` (`src/components/studio-panel.css`). Top:
+the open preset's name, then Looks and Presets as grids of the same thumbnails
+(`listDesk`, `grid()` in `presets-sheet.js`), the selected own tile's ⋯ holding
+Rename, Delete and the host's actions. Below: the five tabs, all of a tab's
+controls at once (`renderDesk` / `syncDesk`, `deskShell` in `phone-editor.js`),
+the band meter heading Audio; then Save, Save As…, Set as Default (standalone).
+Controls that do nothing now are greyed with `irrelevantReason`
+(`control-tabs.js`) as their title — the phone hides the same ones. No Adjust,
+no Cancel: edits are live. Open / closed is `deskStudio()`
+(`src/studio/desk-studio.js`): the cog, Tab, both nav buttons and a tap on the
+plate go through it; `body.studio-desk` slides the panel in and moves the plate,
+nav, source popups and fullscreen button into the stage.
+
 ## Project Structure
 
 The repository root *is* the app — Vite, vanilla JS web components, and the engine.
