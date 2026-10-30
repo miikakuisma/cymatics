@@ -7,7 +7,7 @@ import { phoneQuery } from '../studio/layout.js'
 import { phoneStudio } from '../studio/phone-studio.js'
 import { onSwipeDown } from '../studio/swipe.js'
 import { thumbnailFor } from '../studio/thumbs.js'
-import { closeMenu, label, moreButton, openMenu, row, tile } from './presets-sheet.js'
+import { closeMenu, grid, label, moreButton, openMenu, row, tile } from './presets-sheet.js'
 
 // What is on the plate now, as a preset: the engine's three sections plus the
 // panel's modulator settings.
@@ -92,29 +92,22 @@ export class PuhdeCymaticsPresets extends HTMLElement {
 			</div>
 		`
 			: `
-			<div class="presets">
-				<ul></ul>
+			<div class="presets desk">
+				<div class="desk-body"></div>
 			</div>
 		`
 		// Read when it fires, not now: the panel can be shown between the two.
 		setTimeout(() => this.place())
   }
 
-	// In or out: from the left in the desktop studio; on a phone the CSS slides
-	// the sheet up (or in from the right, sideways) on .shown.
+	// In or out on a phone: the CSS slides the sheet up (or in from the right,
+	// sideways) on .shown. On desktop the whole studio panel slides
+	// (studio-panel.css), so there is nothing to do here.
 	place() {
-		const panel = this.querySelector('.presets')
+		const panel = this.querySelector('.presets.sheet')
 		if (!panel) return
-		const shown = this.visible === 'true'
-		if (panel.classList.contains('sheet')) {
-			panel.style.transform = ''
-			panel.classList.toggle('shown', shown)
-			return
-		}
-		const studioMode = s('#app').getAttribute('mode') === 'studio'
-		panel.style.transform = shown
-			? (studioMode ? 'translateX(0)' : 'translateY(0)')
-			: (studioMode ? 'translateX(-300px)' : 'translateY(200px)')
+		panel.style.transform = ''
+		panel.classList.toggle('shown', this.visible === 'true')
 	}
 
 	async refresh() {
@@ -134,57 +127,18 @@ export class PuhdeCymaticsPresets extends HTMLElement {
 
 	listPresets() {
 		if (phoneQuery().matches) return this.listSheet()
-		const ul = this.querySelector('.presets ul')
-		if (!ul) return
-		ul.replaceChildren()
-		const heading = (text) => {
-			const li = document.createElement('li')
-			li.className = 'preset-group'
-			li.textContent = text
-			ul.append(li)
-		}
-		const row = (label, selected, onPick, buttons = []) => {
-			const li = document.createElement('li')
-			if (selected) li.classList.add('activated')
-			const span = document.createElement('span')
-			span.textContent = label
-			li.append(span, ...buttons)
-			li.onclick = (e) => { if (!e.target.closest('button')) onPick() }
-			ul.append(li)
-		}
-		const button = (fn, title, glyph, onClick) => {
-			const b = document.createElement('button')
-			b.setAttribute('fn', fn)
-			b.title = title
-			b.textContent = glyph
-			b.addEventListener('click', (e) => { e.stopPropagation(); onClick() })
-			return b
-		}
-		heading('Looks')
-		for (const look of LOOKS) {
-			row(look.name, this.current.source === 'look' && this.current.id === look.id, () => this.loadLook(look))
-		}
-		// Factory presets first, then the user's own. Factory ones have no rename
-		// or delete, and Save on one goes to Save As, so they cannot be lost.
-		heading('Presets')
-		for (const f of defaultPresets) {
-			row(f.name, this.current.source === 'factory' && this.current.id === f.objectId, () => this.loadFactory(f))
-		}
-		for (const p of this.mine) {
-			row(p.name, this.current.source === 'own' && this.current.id === p.id, () => this.loadOwn(p), [
-				button('rename', 'Rename', '✎', () => this.renamePreset(p)),
-				button('delete', 'Delete', '×', () => this.deletePreset(p)),
-			])
-		}
-		for (const action of host().actions) {
-			const ok = this.canRun(action)
-			const b = button('action', action.label, action.label, () => ok && action.run({ id: this.current.id, name: this.current.name }))
-			b.disabled = !ok
-			const li = document.createElement('li')
-			li.className = 'preset-action'
-			li.append(b)
-			ul.append(li)
-		}
+		return this.listDesk()
+	}
+
+	// The open preset's name, over the rows or grids.
+	heading(className) {
+		const head = document.createElement('div')
+		head.className = className
+		const title = document.createElement('span')
+		title.className = 'sheet-title'
+		title.textContent = this.current.name || 'Untitled'
+		head.append(title)
+		return head
 	}
 
 	// The phone picker: the open preset's name, Adjust and the menu, a row of
@@ -195,13 +149,8 @@ export class PuhdeCymaticsPresets extends HTMLElement {
 		if (!body) return
 		closeMenu()
 		const scrolled = [...body.querySelectorAll('.sheet-row')].map((r) => r.scrollLeft)
-		const is = (source, id) => this.current.source === source && this.current.id === id
 
-		const head = document.createElement('div')
-		head.className = 'sheet-head'
-		const title = document.createElement('span')
-		title.className = 'sheet-title'
-		title.textContent = this.current.name || 'Untitled'
+		const head = this.heading('sheet-head')
 		// Adjust sits in the header, so no height of screen hides it below the
 		// sheet's fold.
 		const adjust = document.createElement('button')
@@ -209,12 +158,48 @@ export class PuhdeCymaticsPresets extends HTMLElement {
 		adjust.className = 'sheet-adjust'
 		adjust.textContent = 'Adjust ›'
 		adjust.addEventListener('click', () => phoneStudio().open('editor'))
-		head.append(title, adjust, moreButton('Preset options', (anchor) => openMenu(anchor, [
+		head.append(adjust, moreButton('Preset options', (anchor) => openMenu(anchor, [
 			{ label: 'Save', run: () => this.save() },
 			...(host().chrome.standalone ? [{ label: 'Set as Default', run: () => this.setAsDefault() }] : []),
 			...host().actions.filter((action) => !action.needsSaved).map((action) => this.actionItem(action)),
 		], this)))
 
+		const { looks, presets } = this.tiles()
+		body.replaceChildren(
+			head,
+			label('Looks'), row(looks),
+			label('Presets'), row(presets),
+		)
+		body.querySelectorAll('.sheet-row').forEach((r, i) => { r.scrollLeft = scrolled[i] ?? 0 })
+	}
+
+	// The desktop panel's top: the open preset's name, then Looks and Presets
+	// as grids. Save, Save As… and Set as Default are the panel's footer
+	// (cymatics-controls), so the header's ⋯ holds only the host's actions
+	// that need no saved preset, and is left out when there are none.
+	listDesk() {
+		const body = this.querySelector('.desk-body')
+		if (!body) return
+		closeMenu()
+		const head = this.heading('desk-head')
+		const actions = host().actions.filter((action) => !action.needsSaved)
+		if (actions.length) {
+			head.append(moreButton('Preset options', (anchor) => openMenu(anchor, actions.map((action) => this.actionItem(action)), this)))
+		}
+		const { looks, presets } = this.tiles()
+		body.replaceChildren(
+			head,
+			label('Looks'), grid(looks),
+			label('Presets'), grid(presets),
+		)
+	}
+
+	// Both layouts' tiles: every look; then the factory presets, the user's
+	// own and ＋ Save. Factory ones have no rename or delete, and Save on one
+	// goes to Save As, so they cannot be lost. The selected own tile's ⋯
+	// holds Rename, Delete and the host's actions.
+	tiles() {
+		const is = (source, id) => this.current.source === source && this.current.id === id
 		const looks = LOOKS.map((look) => {
 			const t = tile({ name: look.name, current: is('look', look.id), onPick: () => this.loadLook(look) })
 			this.paint(t.img, `look:${look.id}`, () => lookPreset(look.id))
@@ -241,13 +226,7 @@ export class PuhdeCymaticsPresets extends HTMLElement {
 			return t.tile
 		})
 		const add = tile({ name: 'Save', glyph: '＋', onPick: () => this.saveAs() }).tile
-
-		body.replaceChildren(
-			head,
-			label('Looks'), row(looks),
-			label('Presets'), row([...factory, ...mine, add]),
-		)
-		body.querySelectorAll('.sheet-row').forEach((r, i) => { r.scrollLeft = scrolled[i] ?? 0 })
+		return { looks, presets: [...factory, ...mine, add] }
 	}
 
 	// A tile's picture: the one drawn before, at once, or else the queue's,

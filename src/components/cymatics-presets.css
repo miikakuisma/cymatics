@@ -34,104 +34,6 @@
   transform-origin: left top;
 }
 
-.presets ul {
-  padding: 0;
-  margin: 0;
-  list-style: none;
-  display: flex;
-  flex-direction: row;
-  padding-left: 32px;
-}
-
-#app[mode="studio"] .presets ul {
-  padding: 0;
-  scroll-snap-type: y mandatory;
-  flex-direction: column;
-}
-
-.presets ul li {
-  position: relative;
-  cursor: pointer;
-  scroll-snap-align: center;
-  background: #111;
-  border-radius: 9px;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  width: 96px;
-  min-width: 96px;
-  height: 96px;
-  min-height: 96px;
-  margin: 0 5px;
-  padding: 0;
-  display: flex;
-  background-size: 60%;
-  background-repeat: no-repeat;
-  background-position: center;
-  transition: all .39s ease-in-out;
-}
-
-#app[mode="studio"] .presets ul li {
-  cursor: pointer;
-  scroll-snap-align: center;
-  background: #111 9px / 48px no-repeat;
-  border-radius: 3px;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  width: 100%;
-  height: auto;
-  min-height: 66px;
-  margin: 0;
-  padding: 15px 0;
-  display: flex;
-  overflow: hidden;
-  border-bottom: 1px solid var(--color4);
-}
-
-#app[mode="studio"] .presets ul li span {
-  padding-left: 20px;
-  color: #ccc;
-  font-size: 13px;
-  width: 100%;
-}
-
-.presets ul li:hover {
-  background-color: var(--color1) !important;
-}
-
-.presets ul li.activated {
-  background-color: #222266 !important;
-}
-
-#app[mode="studio"] .presets ul li:hover span {
-  color: white;
-}
-
-.presets ul li button[fn="delete"] {
-  position: absolute;
-  top: 22px;
-  right: 12px;
-  border-radius: 50%;
-  background: transparent;
-  width: 24px;
-  height: 24px;
-  border: none;
-  color: white;
-  cursor: pointer;
-}
-
-.presets ul li button[fn="delete"] svg {
-  fill: var(--color2);
-  pointer-events: none;
-  opacity: 0.3;
-}
-
-.presets ul li button[fn="delete"]:hover svg {
-  fill: red;
-  opacity: 1;
-}
-
 @media (max-width: 620px) {
 
   #app[mode="studio"] .presets {
@@ -139,15 +41,7 @@
   }
 
 }
-cymatics-presets .preset-group { opacity: 0.55; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; pointer-events: none; padding-top: 10px; }
-#app[mode="studio"] .presets ul li.preset-group { min-height: 0; padding: 14px 0 6px; background: none; border-bottom: none; color: #ccc; }
 cymatics-presets .preset-note { font-size: 12px; opacity: 0.8; min-height: 1.2em; margin: 8px 12px; color: #ccc; }
-#app[mode="studio"] .presets ul li.preset-action { min-height: 0; padding: 10px; background: none; border-bottom: none; }
-cymatics-presets .preset-action button { width: 100%; }
-.presets ul li button[fn="rename"] { position: absolute; top: 22px; right: 40px; width: 24px; height: 24px; border: none; background: transparent; color: #888; cursor: pointer; }
-.presets ul li button[fn="rename"]:hover { color: white; }
-.presets ul li button[fn="delete"] { color: #888; font-size: 18px; line-height: 1; }
-.presets ul li button[fn="delete"]:hover { color: #ff6b6b; }
 
 /* ── Phone: the picker sheet ──────────────────────────────────────────────
    cymatics-presets renders .presets.sheet only on a phone. The query is
@@ -427,4 +321,222 @@ cymatics-presets .preset-action button { width: 100%; }
 
   }
 
+}
+
+/* ── Desktop: the top of the studio panel ─────────────────────────────────
+   cymatics-presets renders .presets.desk off a phone, inside the studio
+   panel (studio-panel.css), which places and slides it. The open preset's
+   name, then Looks and Presets as grids four across. Not filtered or
+   transformed: the ⋯ menus are fixed to the viewport. */
+#app[mode="studio"] .presets.desk {
+  --desk-gutter: 16px;
+  --desk-accent: #8fa6ff;
+  position: static;
+  z-index: auto;
+  display: block;
+  width: auto;
+  height: auto;
+  padding: 0 0 4px;
+  overflow: visible;
+  scroll-snap-type: none;
+  background: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  transform: none;
+  transition: none;
+}
+
+.presets.desk button {
+  appearance: none;
+  border: 0;
+  padding: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.presets.desk button:focus-visible {
+  outline: 2px solid var(--desk-accent);
+  outline-offset: 2px;
+}
+
+.presets.desk .desk-head {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 48px;
+  padding: 0 8px 0 var(--desk-gutter);
+}
+
+.presets.desk .sheet-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.presets.desk .sheet-more {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  font-size: 18px;
+  color: var(--color2);
+}
+
+.presets.desk .sheet-label {
+  margin: 0 0 8px;
+  padding: 0 var(--desk-gutter);
+  font-size: 10px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  opacity: .5;
+}
+
+.presets.desk .sheet-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px 8px;
+  padding: 0 var(--desk-gutter) 14px;
+}
+
+.presets.desk .tile {
+  position: relative;
+  min-width: 0;
+}
+
+.presets.desk .tile-pick {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+}
+
+.presets.desk .tile-thumb {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: 100%;
+  aspect-ratio: 1;
+  overflow: hidden;
+  background: #1f1f26;
+  border: 2px solid transparent;
+  border-radius: 10px;
+  font-size: 22px;
+  color: #888;
+  transition: border-color .15s;
+}
+
+.presets.desk .tile.current .tile-thumb {
+  border-color: var(--desk-accent);
+}
+
+.presets.desk .tile-thumb img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* No src yet: the dark tile shows through. */
+.presets.desk .tile-thumb img:not([src]) {
+  visibility: hidden;
+}
+
+.presets.desk .tile-name {
+  overflow: hidden;
+  font-size: 11px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  text-align: center;
+  color: #bbb;
+}
+
+.presets.desk .tile.current .tile-name {
+  color: #fff;
+}
+
+/* The selected own tile's ⋯, on the thumb's corner. */
+.presets.desk .tile-more {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: rgb(0 0 0 / 70%);
+  font-size: 13px;
+  line-height: 22px;
+  color: #fff;
+}
+
+.presets.desk .preset-note {
+  margin: 0 var(--desk-gutter) 10px;
+  text-align: center;
+}
+
+.presets.desk .preset-note:empty {
+  display: none;
+}
+
+@media (hover: hover) {
+
+  .presets.desk .tile-pick:hover .tile-thumb {
+    border-color: #4a4a58;
+  }
+
+  .presets.desk .tile.current .tile-pick:hover .tile-thumb {
+    border-color: var(--desk-accent);
+  }
+
+  .presets.desk .tile-pick:hover .tile-name {
+    color: #fff;
+  }
+
+  .presets.desk .sheet-more:hover,
+  .presets.desk .tile-more:hover {
+    background: #2b2f55;
+  }
+
+}
+
+/* Menus, placed by presets-sheet.js; the phone's are under its query. */
+.studio-panel.desk cymatics-presets .sheet-menu {
+  position: fixed;
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  min-width: 160px;
+  padding: 4px;
+  background: #24242b;
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgb(0 0 0 / 50%);
+}
+
+.studio-panel.desk cymatics-presets .sheet-menu button {
+  appearance: none;
+  min-height: 32px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: #eee;
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.studio-panel.desk cymatics-presets .sheet-menu button:hover:not(:disabled) {
+  background: #2b2f55;
+}
+
+.studio-panel.desk cymatics-presets .sheet-menu button:disabled {
+  opacity: .35;
+  cursor: default;
 }
