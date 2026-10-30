@@ -152,6 +152,50 @@ p-audio .osc-stop:hover {
   color: white;
 }
 
+/* ── Phone: docked by the studio's sheet ──────────────────────────────────
+   While the picker or the editor is open (body.phone-sheet-open), the source
+   menu and the tone controls sit just above it, or left of its column
+   sideways, instead of over it. --sheet-room and --sheet-side come from
+   cymatics-component.css. #app outranks the standalone app's centred menu
+   (styles.css). The query is PHONE_QUERY (src/studio/layout.js). */
+@media (max-width: 768px), (pointer: coarse) and (max-height: 500px) {
+
+  body.phone-sheet-open #app p-audio .options,
+  body.phone-sheet-open #app p-audio .osc-overlay {
+    top: auto;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+
+  @media (orientation: portrait) {
+
+    body.phone-sheet-open #app p-audio .options,
+    body.phone-sheet-open #app p-audio .osc-overlay {
+      bottom: calc(var(--sheet-room) + 8px);
+    }
+
+    body.phone-sheet-open #app p-audio .options {
+      max-height: calc(100 * var(--vh) - var(--sheet-room) - env(safe-area-inset-top) - 16px);
+    }
+
+  }
+
+  @media (orientation: landscape) {
+
+    body.phone-sheet-open #app p-audio .options,
+    body.phone-sheet-open #app p-audio .osc-overlay {
+      bottom: calc(48px + env(safe-area-inset-bottom) + 8px);
+      left: max(148px, (100vw - var(--sheet-side)) / 2);
+    }
+
+    body.phone-sheet-open #app p-audio .options {
+      max-height: calc(100 * var(--vh) - 64px - env(safe-area-inset-bottom) - env(safe-area-inset-top));
+    }
+
+  }
+
+}
+
 /* Add station modal */
 .add-station-modal {
   z-index: 100000;

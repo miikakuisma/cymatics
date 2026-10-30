@@ -200,8 +200,10 @@ cymatics-presets .preset-action button { width: 100%; }
     -webkit-tap-highlight-color: transparent;
   }
 
-  /* Header: the open preset's name, and its ⋯ menu. */
+  /* Header: the open preset's name, and its ⋯ menu. Swiping it down closes
+     the sheet (src/studio/swipe.js): pan-x leaves a vertical drag to that. */
   .presets.sheet .sheet-head {
+    touch-action: pan-x;
     display: flex;
     align-items: center;
     justify-content: space-between;

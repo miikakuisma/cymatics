@@ -1,4 +1,5 @@
 import { applyDynamicState } from '../dynamic-state.js'
+import { phoneQuery } from '../studio/layout.js'
 
 export class PuhdeCymatics extends HTMLElement {
 
@@ -504,7 +505,10 @@ window.engine = class engine {
 							engineApi.sendCommand(`set cymatics ${JSON.stringify(this.state.cymaticsConfig)}`)
 							engineApi.sendCommand(`set renderer ${JSON.stringify(this.state.rendererConfig)}`)
 
+							// A tap on the plate closes the open panels, except on a phone,
+							// where it is too easy to hit while dragging a slider above it.
 							s('p-cymatics').addEventListener('click', () => {
+								if (phoneQuery().matches) return
 								sAll('p-nav button.activated').forEach(b => {
 									b.click()
 								})

@@ -1,3 +1,6 @@
+import { phoneQuery } from '../studio/layout.js'
+import { phoneStudio } from '../studio/phone-studio.js'
+
 export class PuhdeNav extends HTMLElement {
 
 	constructor() {
@@ -7,6 +10,20 @@ export class PuhdeNav extends HTMLElement {
 
   connectedCallback() {
 		this.render()
+    // On a phone the buttons light up with the phone studio's phase.
+    this.unsubscribe = phoneStudio().onChange(() => this.syncPhone())
+  }
+
+  disconnectedCallback() {
+    this.unsubscribe?.()
+  }
+
+  // Grid is lit while the studio is open, sliders while the editor is.
+  syncPhone() {
+    if (!phoneQuery().matches) return
+    const phase = phoneStudio().phase
+    this.querySelector('[fn="presets"]')?.classList.toggle('activated', phase !== 'closed')
+    this.querySelector('[fn="edit"]')?.classList.toggle('activated', phase === 'editor')
   }
 
 	static get observedAttributes() {
@@ -44,7 +61,15 @@ export class PuhdeNav extends HTMLElement {
         </ul>
       `
       setTimeout(() => {
+        // On a phone, grid opens the picker or closes the studio, and sliders
+        // opens the editor or closes it; leaving the editor keeps the edits.
         this.querySelector('[fn="presets"]').addEventListener('click', (e) => {
+          if (phoneQuery().matches) {
+            const studio = phoneStudio()
+            if (studio.phase === 'closed') studio.open('picker')
+            else studio.close()
+            return
+          }
           const isVisible = s('cymatics-presets').getAttribute('visible') === 'true'
           if (!isVisible) {
             s('cymatics-presets').setAttribute('visible', 'true')
@@ -60,6 +85,12 @@ export class PuhdeNav extends HTMLElement {
         })
   
         this.querySelector('[fn="edit"]').addEventListener('click', (e) => {
+          if (phoneQuery().matches) {
+            const studio = phoneStudio()
+            if (studio.phase === 'editor') studio.close()
+            else studio.open('editor')
+            return
+          }
           const isVisible = s('cymatics-controls').getAttribute('visible') === 'true'
           if (!isVisible) {
             s('cymatics-controls').setAttribute('visible', 'true')
@@ -71,10 +102,14 @@ export class PuhdeNav extends HTMLElement {
         })
 
         // Sync activated state with current panel visibility
-        if (s('cymatics-presets')?.getAttribute('visible') === 'true')
-          this.querySelector('[fn="presets"]').classList.add('activated')
-        if (s('cymatics-controls')?.getAttribute('visible') === 'true')
-          this.querySelector('[fn="edit"]').classList.add('activated')
+        if (phoneQuery().matches) {
+          this.syncPhone()
+        } else {
+          if (s('cymatics-presets')?.getAttribute('visible') === 'true')
+            this.querySelector('[fn="presets"]').classList.add('activated')
+          if (s('cymatics-controls')?.getAttribute('visible') === 'true')
+            this.querySelector('[fn="edit"]').classList.add('activated')
+        }
 
         // this.querySelector('[fn="cover"]').addEventListener('click', (e) => {
         //   const isCoverMode = s('p-cymatics').getAttribute('cover') === 'true'      

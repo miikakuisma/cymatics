@@ -5,6 +5,7 @@ import { overDefaults } from '../studio/look-config.js'
 import { defaultPresets } from '../default-presets.js'
 import { phoneQuery } from '../studio/layout.js'
 import { phoneStudio } from '../studio/phone-studio.js'
+import { onSwipeDown } from '../studio/swipe.js'
 import { thumbnailFor } from '../studio/thumbs.js'
 import { closeMenu, label, moreButton, openMenu, row, tile } from './presets-sheet.js'
 
@@ -45,6 +46,10 @@ export class PuhdeCymaticsPresets extends HTMLElement {
 			this.listPresets()
 		}
 		phoneQuery().addEventListener('change', this.onLayout)
+		if (!this.swipes) {
+			this.swipes = true
+			onSwipeDown(this, '.presets.sheet .sheet-head', () => phoneStudio().close())
+		}
   }
 
 	disconnectedCallback() {
@@ -299,7 +304,11 @@ export class PuhdeCymaticsPresets extends HTMLElement {
 		const f = defaultPresets.find((d) => wantPlate
 			? d.preset.cymatics?.field_mode === 2
 			: !d.preset.cymatics?.field_mode)
-		if (f) this.loadFactory(f)
+		if (!f) return
+		// Mid-edit on a phone the session ends first, as Done: the edits are
+		// kept, and the new preset is not one Cancel would undo.
+		if (phoneStudio().phase === 'editor') phoneStudio().done()
+		this.loadFactory(f)
 	}
 
 	async loadOwn(p) {

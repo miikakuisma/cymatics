@@ -56,6 +56,31 @@ A preset file (`src/preset.js`) wraps the studio's preset as
 Music and the desktop. The studio keeps them as `window.__…` globals for its panel;
 `src/dynamic-state.js` moves them in and out of a preset.
 
+## Phone studio
+
+A phone is `(max-width: 768px), (pointer: coarse) and (max-height: 500px)` —
+`PHONE_QUERY` in `src/studio/layout.js`, copied verbatim into the CSS — so a phone
+held sideways is still one. There the studio is three phases (`src/studio/phone-studio.js`):
+closed, the **picker** (`cymatics-presets` as a bottom sheet of look and preset
+thumbnails) and the **editor** (`cymatics-controls`, one control at a time under five
+tabs, `src/studio/control-tabs.js`); sideways both are a 300px column on the right.
+The cog, Tab and the nav's grid open the picker; its Adjust, or the nav's sliders,
+opens the editor. `mount.js` `show()` puts each phase on screen and shrinks the plate
+to the space the panel leaves (`.sheet-picker` / `.sheet-editor` / `.sheet-editor-tall`
+on the wrapper).
+
+Adjust snapshots everything the editor can change (`src/studio/studio-snapshot.js`).
+**Only Cancel reverts it.** Every other way out keeps the edits, as Done does: the
+nav buttons, the cog, Tab, swiping the sheet's header or the editor's tabs down
+(`src/studio/swipe.js`), widening to desktop, and a source that loads its own
+preset (`matchSource`). A tap on the plate closes nothing on a phone.
+
+Thumbnails are the real engine (`src/studio/thumbnailer.js`) driven by one fixed,
+music-like spectrum (`thumbSpectrum`), not the idle swell, rendered one at a time
+(`thumbnails.js`, `thumbs.js`) and cached in their own IndexedDB database,
+`CymaticsThumbs` (`thumb-cache.js`). The sheet's and editor's parts are built in
+`src/components/presets-sheet.js` and `phone-editor.js`.
+
 ## Project Structure
 
 The repository root *is* the app — Vite, vanilla JS web components, and the engine.

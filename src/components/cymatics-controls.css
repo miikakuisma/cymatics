@@ -662,8 +662,11 @@ details[open] summary:after {
   }
 
   /* The five tabs: they fit the 300px landscape column and a 360px screen
-     with room between them; anything narrower scrolls, keeping the gaps. */
+     with room between them; anything narrower scrolls, keeping the gaps.
+     Swiping them down closes the editor (src/studio/swipe.js): pan-x keeps
+     the sideways scroll and leaves a vertical drag to that. */
   #app[mode="studio"] .controls.editor .tab-row {
+    touch-action: pan-x;
     display: flex;
     gap: 6px;
     justify-content: space-between;

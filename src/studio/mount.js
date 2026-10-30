@@ -33,7 +33,7 @@ import { DEFAULT_LOOK, lookPreset } from '../element/looks.js'
 import { host, setHost } from './host.js'
 import { overDefaults, setEngineDefaults } from './look-config.js'
 import { phoneQuery } from './layout.js'
-import { initPhoneStudio } from './phone-studio.js'
+import { initPhoneStudio, phoneStudio } from './phone-studio.js'
 import { captureStudio, restoreStudio } from './studio-snapshot.js'
 
 const ABOUT = `
@@ -47,15 +47,45 @@ const ABOUT = `
 `
 
 // What each phone phase puts on screen, one at a time: the picker is
-// cymatics-presets as a sheet, the editor is cymatics-controls.
-// studio-active is what lets the sheet show at all.
+// cymatics-presets as a sheet, the editor is cymatics-controls, and the plate
+// makes room above them (fitPlate). studio-active is what lets the sheet show
+// at all. Off a phone it only clears the phone's own marks: the desktop studio
+// is setStudio's, and a resize to desktop sets it after leaving the phone.
 function show(phase) {
   const phone = phoneQuery().matches
-  const picker = phone && phase === 'picker'
+  const open = phone && phase !== 'closed'
+  document.body.classList.toggle('phone-sheet-open', open)
+  if (phone) {
+    document.body.classList.toggle('studio-active', open)
+    s('#studio-toggle-btn')?.classList.toggle('active', open)
+    s('cymatics-presets').setAttribute('visible', phase === 'picker' ? 'true' : 'false')
+    s('cymatics-controls').setAttribute('visible', phase === 'editor' ? 'true' : 'false')
+  }
+  fitPlate(phase)
+}
+
+// The plate's room on a phone (cymatics-component.css): above the picker
+// sheet, above the editor, or above the editor's tall area while its tool
+// needs one.
+const PLATE_ROOM = ['sheet-picker', 'sheet-editor', 'sheet-editor-tall']
+let plateTimer
+
+function fitPlate(phase) {
+  const wrapper = s('.cymatics-wrapper')
+  const phone = phoneQuery().matches
   const editor = phone && phase === 'editor'
-  document.body.classList.toggle('studio-active', picker || editor)
-  s('cymatics-presets').setAttribute('visible', picker ? 'true' : 'false')
-  if (phone) s('cymatics-controls').setAttribute('visible', editor ? 'true' : 'false')
+  const want = {
+    'sheet-picker': phone && phase === 'picker',
+    'sheet-editor': editor,
+    'sheet-editor-tall': editor && s('cymatics-controls').tall,
+  }
+  const changed = PLATE_ROOM.filter((name) => wrapper.classList.contains(name) !== want[name])
+  if (!changed.length) return
+  for (const name of changed) wrapper.classList.toggle(name, want[name])
+  // The canvas keeps its pixel size until told. Told once the plate has
+  // settled (its transition is .39s); meanwhile it scales with the plate.
+  clearTimeout(plateTimer)
+  plateTimer = setTimeout(() => engine.api.resizeHandler(), 400)
 }
 
 const launchApp = () => {
@@ -129,29 +159,54 @@ const launchApp = () => {
   cogBtn.title = 'Toggle studio mode (Tab)'
   app.appendChild(cogBtn)
 
-  // A hosted studio opens on the studio: that is what it was opened for.
-  let studioActive = isAdvanced || !standalone
-
-  const toggleStudio = () => {
-    studioActive = !studioActive
-    document.body.classList.toggle('studio-active', studioActive)
-    cogBtn.classList.toggle('active', studioActive)
-    s('cymatics-presets').setAttribute('visible', studioActive ? 'true' : 'false')
-    s('cymatics-controls').setAttribute('visible', studioActive ? 'true' : 'false')
-    const presetsBtn = s('[fn="presets"]')
-    const editBtn = s('[fn="edit"]')
-    if (presetsBtn) presetsBtn.classList.toggle('activated', studioActive)
-    if (editBtn) editBtn.classList.toggle('activated', studioActive)
+  // The desktop studio: both panels, the nav and the cog, all at once. On a
+  // phone the studio is phoneStudio()'s phases instead (show() above).
+  let studioActive = false
+  const setStudio = (on) => {
+    studioActive = on
+    document.body.classList.toggle('studio-active', on)
+    cogBtn.classList.toggle('active', on)
+    s('cymatics-presets').setAttribute('visible', on ? 'true' : 'false')
+    s('cymatics-controls').setAttribute('visible', on ? 'true' : 'false')
+    s('[fn="presets"]')?.classList.toggle('activated', on)
+    s('[fn="edit"]')?.classList.toggle('activated', on)
   }
 
-  if (studioActive) {
-    document.body.classList.add('studio-active')
-    cogBtn.classList.add('active')
-    cymaticsPresets.setAttribute('visible', 'true')
-    cymaticsControls.setAttribute('visible', 'true')
+  // The cog and Tab. On a phone they open the picker, or close whatever is
+  // open, keeping any edits (only Cancel reverts).
+  const toggleStudio = () => {
+    if (!phoneQuery().matches) return setStudio(!studioActive)
+    const studio = phoneStudio()
+    if (studio.phase === 'closed') studio.open('picker')
+    else studio.close()
+  }
+
+  // A hosted studio opens on the studio: that is what it was opened for.
+  if (isAdvanced || !standalone) {
+    if (phoneQuery().matches) phoneStudio().open('picker')
+    else setStudio(true)
   }
 
   cogBtn.addEventListener('click', toggleStudio)
+
+  // Crossing between phone and desktop. To desktop, an open phone studio ends
+  // as Done and the desktop studio opens in its place; to a phone, an open
+  // desktop studio becomes the picker. Turning a phone sideways is no change
+  // here (both ways up are phone), so an edit session lives through it.
+  phoneQuery().addEventListener('change', () => {
+    const studio = phoneStudio()
+    if (phoneQuery().matches) {
+      show('closed')
+      if (studioActive) studio.open('picker')
+    } else {
+      const wasOpen = studio.phase !== 'closed'
+      studio.leavePhone()
+      setStudio(wasOpen)
+    }
+  })
+
+  // The editor's tall area comes and goes with its selected tool.
+  cymaticsControls.addEventListener('toolchange', () => fitPlate(phoneStudio().phase))
 
   document.addEventListener('keydown', (e) => {
     if (e.key === 'Tab' && !e.target.matches('input, textarea, select')) {

@@ -5,6 +5,7 @@ import { poleConfigs } from "./pole-config.js"
 import { fileToScaledDataUrl } from '../image-util.js'
 import { phoneQuery } from '../studio/layout.js'
 import { phoneStudio } from '../studio/phone-studio.js'
+import { onSwipeDown } from '../studio/swipe.js'
 import { toolId, toolsFor } from '../studio/control-tabs.js'
 import { EQ_TOOL, editorShell, sliderHead, toolButton, toolWrapper } from './phone-editor.js'
 
@@ -141,6 +142,8 @@ export class PuhdeCymaticsControls extends HTMLElement {
       this.render()
       this.initButtons()
     })
+    // Swiping the tab row down closes the editor, keeping the edits.
+    onSwipeDown(this, '.controls.editor .tab-row', () => phoneStudio().close())
   }
 
 	static get observedAttributes() {
@@ -323,7 +326,7 @@ export class PuhdeCymaticsControls extends HTMLElement {
       b.setAttribute('aria-selected', String(on))
     }
 
-    // For whoever sizes the plate around the editor (Task 9's show()).
+    // For whoever sizes the plate around the editor (mount.js fitPlate).
     const signal = `${this.tab}/${this.tool}/${this.tall}`
     if (signal !== this.signal) {
       this.signal = signal
@@ -340,7 +343,6 @@ export class PuhdeCymaticsControls extends HTMLElement {
     const shown = this.visible === 'true'
     this.querySelector('.controls.editor')?.classList.toggle('shown', shown)
     this.querySelector('.editor-bar')?.classList.toggle('shown', shown)
-    s('.cymatics-wrapper')?.classList.toggle('controls-open', shown)
   }
 
   updateControlsFromEngineState() {
