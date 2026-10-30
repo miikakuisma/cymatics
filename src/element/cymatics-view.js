@@ -3,7 +3,8 @@ import { BINS, hasSignal } from './scale.js'
 import { blend, freshSpectrum, idleSpectrum, idleWeight } from './idle.js'
 import { coverSize, parseMaxDpr } from './size.js'
 import { DEFAULT_LOOK, lookPreset } from './looks.js'
-import { createBandFollower, createModulators, isModulatorKey, presetModulators } from './modulate.js'
+import { applyPreset } from './apply-preset.js'
+import { createBandFollower } from './modulate.js'
 import { createSpectrumTap } from './tap.js'
 
 const STYLE = `
@@ -168,19 +169,14 @@ export class CymaticsView extends HTMLElement {
 		this._engine.setViewport(pixels, pixels)
 	}
 
-	// Engine defaults first, then the preset: a key the new one leaves out goes
-	// back to the engine's value rather than keeping the old one's. Modulator
-	// settings are not engine keys; they become the modulators.
+	// The shared application lives in apply-preset.js, so the studio's
+	// thumbnails put a preset on an engine exactly as this does.
 	_applyLook() {
 		const preset = this._custom ?? lookPreset(this.look)
-		for (const section of ['renderer', 'cymatics', 'liquid']) {
-			const own = Object.fromEntries(Object.entries(preset[section] || {}).filter(([key]) => !isModulatorKey(key)))
-			const merged = { ...this._defaults[section], ...own }
-			this._engine.command(`set ${section} ${JSON.stringify(merged)}`)
-			if (section === 'renderer') this._lights = merged.lights || []
-			if (section === 'cymatics') this._viewScale = merged.view_scale
-		}
-		this._mods = createModulators(presetModulators(preset), { lights: () => this._lights })
+		const { mods, lights, viewScale } = applyPreset(this._engine, this._defaults, preset)
+		this._mods = mods
+		this._lights = lights
+		this._viewScale = viewScale
 		this._applyZoom()
 	}
 
