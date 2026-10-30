@@ -82,6 +82,59 @@ test('genSymEig: rank-deficient M truncated', () => {
   assert.equal(vectors.length, n * 4);
 });
 
+test('genSymEig: ill-conditioned M keeps M-orthonormal columns and small residual', () => {
+  const n = 120, tol = 1e-11;
+  const Q = symEig(randSym(n, 4242), n).vectors; // random orthogonal
+  const mu = Array.from({ length: n }, (_, i) => Math.pow(10, (-12 * i) / (n - 1)));
+  const M = new Float64Array(n * n);
+  for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) {
+    let s = 0;
+    for (let k = 0; k < n; k++) s += Q[i * n + k] * mu[k] * Q[j * n + k];
+    M[i * n + j] = s;
+  }
+  for (let i = 0; i < n; i++) for (let j = 0; j < i; j++) M[i * n + j] = M[j * n + i] = 0.5 * (M[i * n + j] + M[j * n + i]);
+  const K = randSym(n, 777);
+  const K0 = Float64Array.from(K), M0 = Float64Array.from(M);
+  const { values, vectors } = genSymEig(K, M, n, { tol });
+  assert.deepEqual(K, K0, 'K not modified');
+  assert.deepEqual(M, M0, 'M not modified');
+
+  const kept = mu.filter((m) => m > tol * mu[0]).length;
+  const m = values.length;
+  assert.equal(m, kept);
+  assert.equal(vectors.length, n * m);
+
+  const mul = (X, c) => { // (n×n)·(n×m column block c) -> n×m
+    const out = new Float64Array(n * m);
+    for (let i = 0; i < n; i++) for (let k = 0; k < n; k++) {
+      const x = X[i * n + k];
+      for (let j = 0; j < m; j++) out[i * m + j] += x * c[k * m + j];
+    }
+    return out;
+  };
+  const MA = mul(M, vectors), KA = mul(K, vectors);
+  // AᵀMA = I: degrades to ~1e-6 for columns near the cutoff (eigenvector error
+  // ~eps·μmax against kept μ ≥ 1e-11), so the bound is 1e-5.
+  let orth = 0;
+  for (let a = 0; a < m; a++) for (let b = 0; b < m; b++) {
+    let s = 0;
+    for (let i = 0; i < n; i++) s += vectors[i * m + a] * MA[i * m + b];
+    orth = Math.max(orth, Math.abs(s - (a === b ? 1 : 0)));
+  }
+  assert.ok(orth < 1e-5, `M-orthonormality ${orth}`);
+  // Galerkin residual: the truncated problem makes K a − λ M a orthogonal to the
+  // kept subspace (not zero: K leaks into the dropped directions), so check
+  // AᵀKA = diag(λ), scaled by the largest |λ|. Measured ~4e-15; bound 1e-10.
+  const lamMax = Math.max(...Array.from(values, Math.abs));
+  let worst = 0;
+  for (let a = 0; a < m; a++) for (let b = 0; b < m; b++) {
+    let s = 0;
+    for (let i = 0; i < n; i++) s += vectors[i * m + a] * KA[i * m + b];
+    worst = Math.max(worst, Math.abs(s - (a === b ? values[a] : 0)) / lamMax);
+  }
+  assert.ok(worst < 1e-10, `relative Galerkin residual ${worst}`);
+});
+
 test('symEig: 400x400 in under 5 s', () => {
   const n = 400, A = randSym(n, 99);
   const t = performance.now();

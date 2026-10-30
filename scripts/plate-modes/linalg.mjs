@@ -154,6 +154,9 @@ export function symEig(A, n) {
  * which may be near-singular: M's eigenvalues μ ≤ tol·μ_max are dropped.
  * @returns {{values: Float64Array, vectors: Float64Array}} ascending λ;
  *   `vectors` is n×m row-major (m = kept count ≤ n), M-orthonormal columns.
+ * Accuracy: M-orthonormality (AᵀMA = I) degrades to ~1e-6 for columns near the
+ * cutoff (eigenvector error ~eps·μmax against kept μ ≥ tol·μmax); it is not
+ * re-orthonormalised. Inputs are not modified.
  */
 export function genSymEig(K, M, n, { tol = 1e-11 } = {}) {
   const { values: mu, vectors: Vm } = symEig(M, n);
