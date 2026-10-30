@@ -8,6 +8,13 @@ import { BINS } from '../element/scale.js'
 
 export const THUMB_CSS_PX = 64
 const THUMB_FRAMES = 90
+// A render yields to the next animation frame every few frames, or sooner
+// once a task has run this long, so a thumbnail never holds the main thread
+// long enough to drop a live frame. Counted for the GPU (whose work is waited
+// for when the result is read back), timed for the CPU (the first frame of a
+// plate builds its modes and programs).
+const FRAMES_PER_TASK = 15
+const TASK_MS = 6
 const DT = 1 / 60
 const SAMPLE_RATE = 48000
 
@@ -21,6 +28,8 @@ export function thumbSpectrum(out) {
 	}
 	return out
 }
+
+const nextFrame = () => new Promise((resolve) => requestAnimationFrame(() => resolve()))
 
 // Throws when WebGL2 is missing; the queue then reports every thumbnail as null.
 export function createThumbnailer() {
@@ -49,9 +58,7 @@ export function createThumbnailer() {
 		thumbSpectrum(spectrum)
 		const bands = createBandFollower()
 		const gl = engine.ctx.gl
-		// No awaits from here on: the drawing buffer is only readable in the
-		// task that rendered it.
-		for (let i = 0; i < THUMB_FRAMES; i++) {
+		const frame = (i) => {
 			engine.ctx.bindDefaultFramebuffer()
 			gl.clearColor(0, 0, 0, 1)
 			gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT)
@@ -64,6 +71,21 @@ export function createThumbnailer() {
 			view.update(DT)
 			view.render(px, px)
 		}
+		let task = performance.now()
+		let batch = 0
+		for (let i = 0; i < THUMB_FRAMES; i++) {
+			if (batch === FRAMES_PER_TASK || (batch > 0 && performance.now() - task > TASK_MS)) {
+				// Sent now, the batch runs on the GPU while the page draws.
+				gl.flush()
+				await nextFrame()
+				task = performance.now()
+				batch = 0
+			}
+			frame(i)
+			batch++
+		}
+		// Read in the task that drew the last frame: the drawing buffer is not
+		// readable after it.
 		out2d.drawImage(canvas, 0, 0)
 		return out.toDataURL('image/jpeg', 0.85)
 	}
