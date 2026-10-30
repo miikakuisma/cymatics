@@ -145,6 +145,9 @@ const typedTone = (text) => {
   return Math.round(Math.min(Math.max(hz, TONE_TYPED_MIN_HZ), TONE_TYPED_MAX_HZ) * 100) / 100
 }
 
+// See cymatics-presets.js matchSource(). Absent in a host without the panel.
+const matchSource = (source) => s('cymatics-presets')?.matchSource?.(source)
+
 function getPlayBtn() {
   return document.querySelector('p-nav button[fn="play"]') || document.querySelector('.simple-play-btn')
 }
@@ -316,7 +319,10 @@ export class PuhdeAudio extends HTMLElement {
 
       this.innerHTML = html
 
+      // Each pick also brings its kind of field (matchSource). Only here and
+      // on a drop: Music followed at launch keeps the preset the app opened.
       this.querySelector('button[fn="external"]')?.addEventListener('click', () => {
+        matchSource('music')
         this.playExternal()
         this.setAttribute('open', 'false')
       })
@@ -325,17 +331,20 @@ export class PuhdeAudio extends HTMLElement {
         this.setAttribute('open', 'false')
       })
       this.querySelector('button[fn="mic"]')?.addEventListener('click', () => {
+        matchSource('mic')
         this.playMicrophone()
         this.setAttribute('open', 'false')
       })
       this.querySelector('button[fn="oscillator"]')?.addEventListener('click', () => {
         this.setAttribute('open', 'false')
+        matchSource('tone')
         this.playOscillator()
         this.renderOscillatorOverlay()
       })
       this.querySelectorAll('button[fn="stream"]').forEach(b => b.addEventListener('click', (e) => {
         if (e.target.classList.contains('fav-remove') || e.target.classList.contains('fav-add')) return
         this.setAttribute('open', 'false')
+        matchSource('radio')
         this.playShoutcast(b.getAttribute('stream-url'))
       }))
       this.querySelector('button[fn="add-station"]')?.addEventListener('click', () => {
@@ -419,6 +428,7 @@ export class PuhdeAudio extends HTMLElement {
               const row = e.target.closest('.search-result')
               modal.remove()
               this.setAttribute('open', 'false')
+              matchSource('radio')
               this.playShoutcast(row.getAttribute('data-url'))
             })
           })
@@ -514,6 +524,7 @@ export class PuhdeAudio extends HTMLElement {
       if (pb) pb.innerHTML = icons.play
     } else if (playButtonAction({ playing: false, offered: host().sources.list }) === 'external') {
       // Music is the only source: follow it again.
+      matchSource('music')
       this.playExternal()
     } else {
       if (this.getAttribute('open') === 'true') {
@@ -851,6 +862,8 @@ export class PuhdeAudio extends HTMLElement {
       this.stopCurrentAudio()
       this.context = new AudioCtx()
       this.context.resume()
+      // After the unlock above, which iOS needs first: this reloads the panel.
+      matchSource('file')
       this.mode = 'file'
       const pb = getPlayBtn()
       if (pb) pb.innerHTML = `<img src="spinner.svg" width="22" height="22" />`
@@ -898,7 +911,9 @@ export class PuhdeAudio extends HTMLElement {
     setTimeout(() => input.remove(), 30000)
   }
 
+  // A dropped file. A user's pick, so it brings No Plate like the menu's.
   async playFromFile(file) {
+    matchSource('file')
     this.playFromBuffer(await engine.api.fileToAudiobuffer(file))
   }
 

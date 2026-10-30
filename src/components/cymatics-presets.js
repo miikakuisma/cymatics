@@ -143,6 +143,21 @@ export class PuhdeCymaticsPresets extends HTMLElement {
 		this.listPresets()
 	}
 
+	// Picking a source brings its kind of field: the tone generator is for
+	// finding single-frequency figures, so it opens on the Round Plate; music,
+	// radio, the mic and files open on No Plate. Only a switch of kind loads
+	// anything — a tone on the Square Plate stays there, and a song over the
+	// user's own ripple preset keeps it.
+	matchSource(source) {
+		const wantPlate = source === 'tone'
+		const onPlate = (engine.state.cymaticsConfig.field_mode ?? 0) !== 0
+		if (wantPlate === onPlate) return
+		const f = defaultPresets.find((d) => wantPlate
+			? d.preset.cymatics?.field_mode === 2
+			: !d.preset.cymatics?.field_mode)
+		if (f) this.loadFactory(f)
+	}
+
 	async loadOwn(p) {
 		try {
 			s('p-cymatics').loadConfig(overDefaults(await host().presets.read(p.id)))
