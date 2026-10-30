@@ -80,6 +80,24 @@ body {
   border-radius: 9px;
 }
 
+/* The start screen: the app icon, as a home screen rounds it, over the name. */
+.about.modal .box {
+  padding: 36px 40px 26px;
+}
+
+.about.modal .box img {
+  width: 128px;
+  border-radius: 22.5%;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.45);
+}
+
+.about.modal .box h1 {
+  margin: 18px 0 22px;
+  font-size: 28px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
 .modal .box  h1 {
   color: white;
   font-size: 24px;

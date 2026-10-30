@@ -39,8 +39,9 @@ import { captureStudio, restoreStudio } from './studio-snapshot.js'
 const ABOUT = `
   <div class="about modal">
     <div class="box">
-      <img src="icon.png" width="256" height="256" alt="Cymatics logo" />
-      <button class="start" style="margin-top: 20px;">Start</button>
+      <img src="icon.png" width="160" height="160" alt="" />
+      <h1>Cymatics</h1>
+      <button class="start">Start</button>
       <a href="https://j2bb1np2v2u.typeform.com/to/EIARUlm8" target="_blank">Feedback</a>
     </div>
   </div>
