@@ -1,5 +1,6 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
+import { defaultPresets } from '../src/default-presets.js'
 import { controls } from '../src/controls.js'
 import { TABS, toolId, isRelevant, irrelevantReason, toolsFor } from '../src/studio/control-tabs.js'
 
@@ -83,4 +84,26 @@ test('irrelevantReason names why, and agrees with isRelevant everywhere', () => 
 test('missing config keys read as engine defaults: field 0, liquid off, mercury', () => {
 	assert.equal(isRelevant(byId('contour_count'), { cymatics: {}, renderer: {} }), true)
 	assert.equal(isRelevant(byId('viscosity'), { cymatics: {}, renderer: {} }), false)
+})
+
+test('the polygon plates behave as plates in the Shape tab and the greying', () => {
+	const hexagon = { cymatics: { field_mode: 5 }, renderer: { liquid_mode: false } }
+	assert.deepEqual(toolsFor('shape', controls, hexagon).map(toolId), ['field_mode', 'view_scale'])
+	for (const id of ['formation', 'freq_detail_scale', 'contour_count']) {
+		assert.notEqual(irrelevantReason(byId(id), hexagon), null, id)
+	}
+})
+
+test('the Field menu lists the plates, and the factory presets include the new ones', () => {
+	const field = byId('field_mode')
+	assert.deepEqual(field.options.map((o) => o.value), [0, 3, 1, 4, 5, 2])
+	assert.deepEqual(field.options.map((o) => o.label), [
+		'No plate', 'Triangle plate', 'Square plate', 'Pentagon plate', 'Hexagon plate', 'Round plate',
+	])
+	const names = defaultPresets.map((p) => p.name)
+	const at = names.indexOf('Square Plate')
+	assert.deepEqual(names.slice(at + 1, at + 4), ['Triangle Plate', 'Pentagon Plate', 'Hexagon Plate'])
+	const fieldOf = (n) => defaultPresets.find((p) => p.name === n).preset.cymatics.field_mode
+	assert.deepEqual(['Triangle Plate', 'Pentagon Plate', 'Hexagon Plate'].map(fieldOf), [3, 4, 5])
+	assert.equal(new Set(defaultPresets.map((p) => p.objectId)).size, defaultPresets.length)
 })

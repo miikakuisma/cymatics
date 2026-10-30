@@ -209,7 +209,14 @@ between the music and the picture.
 `field_mode` (the studio's **Field**) picks what the music excites: **0**
 radiating sources, the default every existing preset uses; **1** a square plate
 and **2** a round plate, ringing their own standing-wave modes (Chladni
-figures), from `src/engine-js/modes.js`. On a plate, Distance (`view_scale`) is
+figures), from `src/engine-js/modes.js`; and **3** a triangle, **4** a pentagon
+and **5** a hexagon. Modes 3–5 are Neumann modes like Square's (a dish of water,
+not a free plate), computed offline by `npm run plate-modes` (about 14 minutes:
+a Galerkin solve over a disc Fourier–Bessel basis plus corner functions, refit as
+a centre series plus fractional-order corner terms, stored as format PLT2 in
+`src/engine-js/plate-data.js`). The picked modes are baked on the GPU into an R32F
+LRU cache of 8 (`plate-bake.js`), so the field pass costs about what Square does.
+Round uses Jₙ zeros where a dish would use Jₙ′; that is noted and unchanged. On a plate, Distance (`view_scale`) is
 the plate's size and so its level of detail, contour mode draws only nodal
 lines, and Freq Detail, Contour Detail and Formation do nothing — the desktop
 studio greys them out and the phone hides them (`PLATE_HIDES` /
@@ -259,6 +266,7 @@ wants a considerably larger value.
 | `src/engine-js/index.js` | Entry point, render loop, command API, audio/texture ingest |
 | `src/engine-js/cymatics.js` | Wave field: envelope follower + uniform setup |
 | `src/engine-js/modes.js` | Plate modes: Bessel functions, mode lists, picking |
+| `src/engine-js/plate-*.js`, `polygons.js` | Polygon plates (field 3–5): data, mode lists, corners, GPU bake |
 | `src/engine-js/liquidsim.js` | Ping-pong Jacobi pressure solver |
 | `src/engine-js/renderer.js` | PBR/refraction uniforms, emissive colour state |
 | `src/engine-js/view.js` | Render path selection, pass sequencing |

@@ -13,6 +13,12 @@ sync.
 | `index.js` | Entry point, render loop, command API, audio/texture ingest |
 | `cymatics.js` | Wave field — envelope follower + uniform setup |
 | `modes.js` | Plate modes: Bessel functions, mode lists, picking (pure, unit-tested) |
+| `polygons.js` | Triangle, pentagon and hexagon geometry (field 3–5) |
+| `plate-modes.js` | Mode lists and picking for the polygon plates |
+| `plate-corners.js` | Fractional-order corner terms of the polygon modes |
+| `plate-data.js` | Shipped mode data, format PLT2 (generated, do not edit) |
+| `plate-bake.js` | Bakes picked polygon modes into an R32F LRU cache of 8 |
+| `shaders/plate_bake.fsh` | The bake pass: evaluates a mode over the plate |
 | `liquidsim.js` | Ping-pong Jacobi pressure solver |
 | `renderer.js` | PBR/refraction uniforms, emissive colour state |
 | `view.js` | Render path selection, pass sequencing |
@@ -52,6 +58,18 @@ every render path above draws it.
   cos(mπx)cos(nπy)`, Chladni's free plate, ringing ∝ m² + n². Round:
   `Jₙ(α·r)·cos(nθ)`, with α the s-th zero of Jₙ, ringing ∝ α². Adapted from
   [evoluteur/cymatics](https://github.com/evoluteur/cymatics) (MIT).
+- **3, triangle**, **4, pentagon** and **5, hexagon** — Neumann modes, like
+  the square's: a dish of water with a wall, rather than a free plate. They
+  are computed offline by `npm run plate-modes` (`scripts/plate-modes/`, about
+  14 minutes): a Galerkin solve over a disc Fourier–Bessel basis plus corner
+  functions, refit as a centre series plus fractional-order corner terms and
+  stored as format PLT2 in `plate-data.js`. At runtime the picked modes are
+  baked on the GPU (`plate-bake.js`, `shaders/plate_bake.fsh`) into an R32F
+  texture cache holding the last 8, so the field pass samples a texture and
+  costs about what the square does.
+
+Round uses the zeros of Jₙ where a dish would use those of Jₙ′ (the Neumann
+condition); that is noted and unchanged.
 
 Each mode follows the spectrum a semitone either side of its frequency through
 the same envelope as the bands; `faraday_threshold` gates them, and the

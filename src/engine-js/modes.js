@@ -1,7 +1,8 @@
 // Copyright 2026 Miika Kuisma
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 
-// Standing-wave modes of a bounded plate, for `field_mode` 1 and 2.
+// Standing-wave modes of a bounded plate, for `field_mode` 1 and 2. (Modes 3-5, the triangle, pentagon and hexagon, are
+// precomputed: see plate-modes.js.)
 //
 // The default field (mode 0) is circular ripples, cos(k·r − ωt), radiating from
 // the poles. Real Chladni and Faraday figures are standing waves set by the

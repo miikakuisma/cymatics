@@ -46,7 +46,10 @@ export const controls = [
     defaultValue: 0,
     options: [
       { value: 0, label: 'No plate' },
+      { value: 3, label: 'Triangle plate' },
       { value: 1, label: 'Square plate' },
+      { value: 4, label: 'Pentagon plate' },
+      { value: 5, label: 'Hexagon plate' },
       { value: 2, label: 'Round plate' },
     ],
   },
