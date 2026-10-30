@@ -15,49 +15,88 @@ export function createPhoneStudio({ session, show }) {
 		for (const fn of [...listeners]) fn(next)
 	}
 
+	function open(next) {
+		if (next === phase) return
+		if (next === 'editor') session.begin()
+		else if (phase === 'editor') session.done()
+		enter(next)
+	}
+
+	function cancel() {
+		if (phase !== 'editor') return
+		try {
+			session.cancel()
+		} finally {
+			enter('picker')
+		}
+	}
+
+	function done() {
+		if (phase !== 'editor') return
+		session.done()
+		enter('picker')
+	}
+
+	const close = () => open('closed')
+
+	function onChange(fn) {
+		listeners.add(fn)
+		return () => listeners.delete(fn)
+	}
+
 	return {
 		get phase() {
 			return phase
 		},
-		open(next) {
-			if (next === phase) return
-			if (next === 'editor') session.begin()
-			else if (phase === 'editor') session.done()
-			enter(next)
-		},
-		close() {
-			this.open('closed')
-		},
-		cancel() {
-			if (phase !== 'editor') return
-			session.cancel()
-			enter('picker')
-		},
-		done() {
-			if (phase !== 'editor') return
-			session.done()
-			enter('picker')
-		},
-		leavePhone() {
-			this.open('closed')
-		},
-		onChange(fn) {
-			listeners.add(fn)
-			return () => listeners.delete(fn)
-		},
+		open,
+		close,
+		cancel,
+		done,
+		leavePhone: close,
+		onChange,
 	}
 }
 
-// The app's instance. Before initPhoneStudio it is inert, as host() is before
+// The app's instance. phoneStudio() always returns the same facade, so a
+// reference or a subscription taken before initPhoneStudio keeps working after
+// it. Before init the underlying instance is inert, as host() is before
 // setHost: it has no studio to capture or show.
 const noop = () => {}
-let current = createPhoneStudio({ session: createEditSession({ capture: noop, restore: noop }), show: noop })
+const subscribers = new Set()
+let current
+let unforward = noop
 
+function use(instance) {
+	unforward()
+	current = instance
+	unforward = instance.onChange((phase) => {
+		for (const fn of [...subscribers]) fn(phase)
+	})
+}
+
+const facade = {
+	get phase() {
+		return current.phase
+	},
+	open: (phase) => current.open(phase),
+	close: () => current.close(),
+	cancel: () => current.cancel(),
+	done: () => current.done(),
+	leavePhone: () => current.leavePhone(),
+	onChange(fn) {
+		subscribers.add(fn)
+		return () => subscribers.delete(fn)
+	},
+}
+
+use(createPhoneStudio({ session: createEditSession({ capture: noop, restore: noop }), show: noop }))
+
+// Returns the facade, the same object phoneStudio() returns.
 export function initPhoneStudio({ capture, restore, show }) {
-	current = createPhoneStudio({ session: createEditSession({ capture, restore }), show })
-	return current
+	use(createPhoneStudio({ session: createEditSession({ capture, restore }), show }))
+	return facade
 }
 
 export function phoneStudio() {
-	return current
+	return facade
 }

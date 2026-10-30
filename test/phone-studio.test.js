@@ -116,10 +116,49 @@ test('onChange returns an unsubscribe function', () => {
 	assert.deepEqual(log.changed, ['picker'])
 })
 
-test('initPhoneStudio builds the instance that phoneStudio() returns', () => {
+test('open(closed) from the editor keeps edits and closes', () => {
+	const { log, studio } = rig()
+	studio.open('editor')
+	studio.open('closed')
+	assert.equal(log.restored.length, 0)
+	assert.equal(studio.phase, 'closed')
+})
+
+test('close and leavePhone work unbound', () => {
+	const { studio } = rig()
+	studio.open('picker')
+	const { close, leavePhone } = studio
+	close()
+	assert.equal(studio.phase, 'closed')
+	studio.open('picker')
+	leavePhone()
+	assert.equal(studio.phase, 'closed')
+})
+
+test('cancel still reaches the picker, and the session ends, when restore throws', () => {
+	const session = createEditSession({ capture: () => 1, restore: () => { throw new Error('boom') } })
+	const studio = createPhoneStudio({ session, show: () => {} })
+	studio.open('editor')
+	assert.throws(() => studio.cancel(), /boom/)
+	assert.equal(studio.phase, 'picker')
+	assert.equal(session.active, false)
+})
+
+test('phoneStudio() is one stable object that survives initPhoneStudio', () => {
+	const early = phoneStudio()
+	const heard = []
+	early.onChange((p) => heard.push(p))
 	const shown = []
 	const made = initPhoneStudio({ capture: () => 1, restore: () => {}, show: (p) => shown.push(p) })
-	assert.equal(phoneStudio(), made)
-	made.open('picker')
+	assert.equal(made, early)
+	assert.equal(phoneStudio(), early)
+	early.open('picker')
 	assert.deepEqual(shown, ['picker'])
+	assert.deepEqual(heard, ['picker'])
+	assert.equal(early.phase, 'picker')
+	// a second init swaps the instance without doubling the listener
+	initPhoneStudio({ capture: () => 1, restore: () => {}, show: () => {} })
+	assert.equal(phoneStudio(), early)
+	early.open('editor')
+	assert.deepEqual(heard, ['picker', 'editor'])
 })
