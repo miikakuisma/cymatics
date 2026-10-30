@@ -167,9 +167,9 @@ cymatics-presets .preset-action button { width: 100%; }
     display: block;
     width: auto;
     height: auto;
-    max-height: 40vh;
-    max-height: 40dvh;
-    padding: 6px 0 12px;
+    max-height: 45vh;
+    max-height: 45dvh;
+    padding: 4px 0 6px;
     overflow: hidden auto;
     overscroll-behavior: contain;
     scroll-snap-type: none;
@@ -200,18 +200,21 @@ cymatics-presets .preset-action button { width: 100%; }
     -webkit-tap-highlight-color: transparent;
   }
 
-  /* Header: the open preset's name, and its ⋯ menu. Swiping it down closes
-     the sheet (src/studio/swipe.js): pan-x leaves a vertical drag to that. */
+  /* Header: the open preset's name, Adjust and the ⋯ menu. Adjust lives here
+     rather than under the rows so that a short screen, which scrolls the
+     sheet, never hides it. Swiping the header down closes the sheet
+     (src/studio/swipe.js): pan-x leaves a vertical drag to that. */
   .presets.sheet .sheet-head {
     touch-action: pan-x;
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 8px;
+    gap: 4px;
     padding: 0 4px 0 var(--sheet-gutter);
   }
 
   .presets.sheet .sheet-title {
+    flex: 1;
+    min-width: 0;
     overflow: hidden;
     font-size: 14px;
     font-weight: 600;
@@ -228,12 +231,16 @@ cymatics-presets .preset-action button { width: 100%; }
   }
 
   .presets.sheet .sheet-label {
-    margin: 2px 0 0;
+    margin: 0;
     padding: 0 var(--sheet-gutter);
     font-size: 10px;
     letter-spacing: .12em;
     text-transform: uppercase;
     opacity: .5;
+  }
+
+  .presets.sheet .sheet-row + .sheet-label {
+    margin-top: 6px;
   }
 
   /* Rows: swiped sideways with momentum, without dragging the page along.
@@ -242,7 +249,7 @@ cymatics-presets .preset-action button { width: 100%; }
   .presets.sheet .sheet-row {
     display: flex;
     gap: 8px;
-    margin-bottom: 4px;
+    margin-bottom: 2px;
     padding: 10px var(--sheet-gutter) 0;
     overflow-x: auto;
     overflow-y: hidden;
@@ -341,17 +348,27 @@ cymatics-presets .preset-action button { width: 100%; }
     inset: -10px;
   }
 
+  /* 32px of pill to see, the header's 44px to hit. */
   .presets.sheet .sheet-adjust {
-    display: block;
-    width: calc(100% - 2 * var(--sheet-gutter));
+    position: relative;
+    isolation: isolate;
+    flex: none;
     height: 44px;
-    margin: 4px var(--sheet-gutter) 0;
-    border-radius: 10px;
-    background: #2b2f55;
+    padding: 0 14px;
     font-size: 14px;
+    font-weight: 600;
   }
 
-  /* A note takes a line under Adjust only while it has something to say. */
+  .presets.sheet .sheet-adjust::before {
+    content: '';
+    position: absolute;
+    inset: 6px 0;
+    z-index: -1;
+    border-radius: 16px;
+    background: #2b2f55;
+  }
+
+  /* A note takes a line under the rows only while it has something to say. */
   .presets.sheet .preset-note {
     min-height: 0;
     margin: 8px var(--sheet-gutter) 0;

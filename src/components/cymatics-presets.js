@@ -46,6 +46,11 @@ export class PuhdeCymaticsPresets extends HTMLElement {
 			this.listPresets()
 		}
 		phoneQuery().addEventListener('change', this.onLayout)
+		// The editor's snapshot is taken as it opens, so an own preset still
+		// being read then must not land after it, where Cancel would undo it.
+		this.unphase = phoneStudio().onChange((phase) => {
+			if (phase === 'editor') this.picks++
+		})
 		if (!this.swipes) {
 			this.swipes = true
 			onSwipeDown(this, '.presets.sheet .sheet-head', () => phoneStudio().close())
@@ -54,6 +59,7 @@ export class PuhdeCymaticsPresets extends HTMLElement {
 
 	disconnectedCallback() {
 		phoneQuery().removeEventListener('change', this.onLayout)
+		this.unphase?.()
 		closeMenu()
 	}
 
@@ -115,6 +121,8 @@ export class PuhdeCymaticsPresets extends HTMLElement {
 
 	// A preset from outside the panel: a file the host opened, or a look.
 	open(preset, { id = null, name = null, mine = false } = {}) {
+		// Mid-edit on a phone the session ends first, as Done (see matchSource).
+		if (phoneStudio().phase === 'editor') phoneStudio().done()
 		this.picks++
 		s('p-cymatics').loadConfig(overDefaults(preset))
 		this.current = mine ? { source: 'own', id, name } : { source: 'file', id: null, name }
@@ -176,9 +184,9 @@ export class PuhdeCymaticsPresets extends HTMLElement {
 		}
 	}
 
-	// The phone picker: the open preset's name and menu, a row of looks, a row
-	// of presets ending in ＋ Save, and Adjust. Rebuilt on every change, so each
-	// row keeps where it was scrolled to.
+	// The phone picker: the open preset's name, Adjust and the menu, a row of
+	// looks, and a row of presets ending in ＋ Save. Rebuilt on every change,
+	// so each row keeps where it was scrolled to.
 	listSheet() {
 		const body = this.querySelector('.sheet-body')
 		if (!body) return
@@ -191,7 +199,14 @@ export class PuhdeCymaticsPresets extends HTMLElement {
 		const title = document.createElement('span')
 		title.className = 'sheet-title'
 		title.textContent = this.current.name || 'Untitled'
-		head.append(title, moreButton('Preset options', (anchor) => openMenu(anchor, [
+		// Adjust sits in the header, so no height of screen hides it below the
+		// sheet's fold.
+		const adjust = document.createElement('button')
+		adjust.type = 'button'
+		adjust.className = 'sheet-adjust'
+		adjust.textContent = 'Adjust ›'
+		adjust.addEventListener('click', () => phoneStudio().open('editor'))
+		head.append(title, adjust, moreButton('Preset options', (anchor) => openMenu(anchor, [
 			{ label: 'Save', run: () => this.save() },
 			...(host().chrome.standalone ? [{ label: 'Set as Default', run: () => this.setAsDefault() }] : []),
 			...host().actions.filter((action) => !action.needsSaved).map((action) => this.actionItem(action)),
@@ -224,17 +239,10 @@ export class PuhdeCymaticsPresets extends HTMLElement {
 		})
 		const add = tile({ name: 'Save', glyph: '＋', onPick: () => this.saveAs() }).tile
 
-		const adjust = document.createElement('button')
-		adjust.type = 'button'
-		adjust.className = 'sheet-adjust'
-		adjust.textContent = 'Adjust ›'
-		adjust.addEventListener('click', () => phoneStudio().open('editor'))
-
 		body.replaceChildren(
 			head,
 			label('Looks'), row(looks),
 			label('Presets'), row([...factory, ...mine, add]),
-			adjust,
 		)
 		body.querySelectorAll('.sheet-row').forEach((r, i) => { r.scrollLeft = scrolled[i] ?? 0 })
 	}
@@ -243,11 +251,12 @@ export class PuhdeCymaticsPresets extends HTMLElement {
 	// asked for only while the sheet is open, so nothing renders before it is
 	// first wanted. A tile replaced meanwhile is left be. Looks and factory
 	// presets never change; an own preset's entry is dropped when it is saved,
-	// renamed or deleted.
+	// renamed or deleted. No thumbnail (no WebGL2) is remembered too, so a
+	// rebuild does not read every own preset again to learn it.
 	paint(img, key, load) {
-		const known = this.thumbs.get(key)
-		if (known) {
-			img.src = known
+		if (this.thumbs.has(key)) {
+			const known = this.thumbs.get(key)
+			if (known) img.src = known
 			return
 		}
 		if (this.visible !== 'true') return
@@ -255,8 +264,8 @@ export class PuhdeCymaticsPresets extends HTMLElement {
 			.then(load)
 			.then((preset) => thumbnailFor(preset))
 			.then((url) => {
-				if (!url) return
 				this.thumbs.set(key, url)
+				if (!url) return
 				if (img.isConnected && img.getAttribute('src') !== url) img.src = url
 			})
 			.catch(() => { /* an unreadable preset keeps its placeholder */ })
