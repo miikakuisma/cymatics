@@ -109,7 +109,7 @@ the bottom bar. The plate shrinks or shifts up so it is not covered.
 - **Save** (over the open preset when it is the user's own) and **Set as
   Default** (standalone only) live in that menu or a "⋯" at the sheet's top
   right; ⌘S / ⇧⌘S keep working as now.
-- An **Adjust ›** button at the bottom of the sheet opens the editor.
+- An **Adjust ›** button in the sheet header, beside ⋯, opens the editor. *(Moved from the bottom during build: at Safari heights the bottom fell below the fold.)*
 
 ### Editor
 
