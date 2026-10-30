@@ -75,14 +75,14 @@ Distance.
 
 ## How (decided)
 
-- **Triangle** (equilateral) has exact closed-form modes (Lamé's: sums of
-  cosine plane waves along the triangle's three directions). Computed in
-  `modes.js` at runtime like `squareModes()`, no data shipped.
-- **Pentagon and hexagon** have no closed form. Their modes are **computed once,
-  offline, by a script in the repo** (as `scripts/make-icons.mjs` is for the
-  icons), and the results are **shipped with the app as data** the engine reads.
-  The script is checked in so the data can be regenerated; its output is
-  committed so the app build does not run it.
+- All three shapes' modes are **computed once, offline, by a script in the
+  repo** (as `scripts/make-icons.mjs` is for the icons), and the results are
+  **shipped with the app as data** the engine reads. The script is checked in so
+  the data can be regenerated; its output is committed so the app build does
+  not run it. *(Planning call: the triangle has an exact formula, but running it
+  through the same pipeline gives one code path in the engine, and the formula
+  becomes the solver's exact check instead — every triangle mode the solver
+  finds is compared against it.)*
 - Orientation: triangle and pentagon **point up**; hexagon **flat top**.
 - Every shape fills the same frame the Round plate does: its corners touch the
   Round plate's circle (`plateUv` radius 1). *(My call: keeps the plates the
@@ -99,7 +99,7 @@ Distance.
 - **The element stays one module.** `npm run build:element` produces
   `dist-element/cymatics-view.js` with no imports and no fetches beyond what the
   page asks for; the studio library (`build:studio`) is hosted by the desktop
-  app. The shipped pentagon/hexagon data must reach the engine in both builds
+  app. The shipped mode data must reach the engine in both builds
   without a separate network request the host would have to serve — inlined in
   the bundle, or generated cheaply on the client from something small that is.
 - `src/engine-js/` stays self-contained (its README says so).
@@ -125,7 +125,7 @@ Distance.
 
 ## Left to the builder
 
-- **How pentagon/hexagon modes are represented and evaluated.** Two reasonable
+- **How the modes are represented and evaluated.** Two reasonable
   shapes of answer, with their trade-off:
   - each mode sampled on a grid and stored in a texture array — simple to
     evaluate, but detail is capped by grid resolution, and the size budget
