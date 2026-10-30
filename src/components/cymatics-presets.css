@@ -82,7 +82,7 @@
   width: 100%;
   height: auto;
   min-height: 66px;
-  margin: 0 5px;
+  margin: 0;
   padding: 15px 0;
   display: flex;
   overflow: hidden;
@@ -140,7 +140,7 @@
 
 }
 cymatics-presets .preset-group { opacity: 0.55; font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; pointer-events: none; padding-top: 10px; }
-#app[mode="studio"] .presets ul li.preset-group { min-height: 0; padding: 14px 0 6px 20px; background: none; border-bottom: none; color: #ccc; }
+#app[mode="studio"] .presets ul li.preset-group { min-height: 0; padding: 14px 0 6px; background: none; border-bottom: none; color: #ccc; }
 cymatics-presets .preset-note { font-size: 12px; opacity: 0.8; min-height: 1.2em; margin: 8px 12px; color: #ccc; }
 #app[mode="studio"] .presets ul li.preset-action { min-height: 0; padding: 10px; background: none; border-bottom: none; }
 cymatics-presets .preset-action button { width: 100%; }
