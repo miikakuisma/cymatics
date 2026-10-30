@@ -64,20 +64,26 @@ held sideways is still one. There the studio is three phases (`src/studio/phone-
 closed, the **picker** (`cymatics-presets` as a bottom sheet of look and preset
 thumbnails) and the **editor** (`cymatics-controls`, one control at a time under five
 tabs, `src/studio/control-tabs.js`); sideways both are a 300px column on the right.
-The cog, Tab and the nav's grid open the picker; its Adjust, or the nav's sliders,
-opens the editor. `mount.js` `show()` puts each phase on screen and shrinks the plate
-to the space the panel leaves (`.sheet-picker` / `.sheet-editor` / `.sheet-editor-tall`
-on the wrapper).
+The cog, Tab and the nav's grid open the picker; its Adjust (in the sheet's header,
+so no screen height hides it), or the nav's sliders,
+opens the editor. `mount.js` `show()` puts each phase on screen. The plate is sized by
+`fitPlate`, which measures the space the open panel leaves — upright, above the sheet
+(and below Cancel / Done in the editor); sideways, left of the column and above the
+nav — into `--plate-top`, `--plate-bottom` and `--plate-width`, again whenever the panel
+changes size (a ResizeObserver). `.sheet-picker` / `.sheet-editor` on the wrapper only
+say which panel is open.
 
 Adjust snapshots everything the editor can change (`src/studio/studio-snapshot.js`).
 **Only Cancel reverts it.** Every other way out keeps the edits, as Done does: the
 nav buttons, the cog, Tab, swiping the sheet's header or the editor's tabs down
-(`src/studio/swipe.js`), widening to desktop, and a source that loads its own
-preset (`matchSource`). A tap on the plate closes nothing on a phone.
+(`src/studio/swipe.js`), widening to desktop, a source that loads its own
+preset (`matchSource`), and a host opening a preset (`open`). An own preset still
+being read when Adjust is tapped is dropped, not loaded after the snapshot. A tap on the plate closes nothing on a phone.
 
 Thumbnails are the real engine (`src/studio/thumbnailer.js`) driven by one fixed,
 music-like spectrum (`thumbSpectrum`), not the idle swell, rendered one at a time
-(`thumbnails.js`, `thumbs.js`) and cached in their own IndexedDB database,
+(`thumbnails.js`, `thumbs.js`), each spread over several animation frames so the
+live plate keeps its frame rate and cached in their own IndexedDB database,
 `CymaticsThumbs` (`thumb-cache.js`). The sheet's and editor's parts are built in
 `src/components/presets-sheet.js` and `phone-editor.js`.
 

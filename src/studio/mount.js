@@ -66,13 +66,13 @@ function show(phase) {
 
 // The plate's room on a phone, measured: the largest square between the top
 // of the screen (or the bottom of Cancel / Done, in the editor) and the open
-// panel, or left of the panel when it is a column, sideways. The figures go
-// to the wrapper, which cymatics-component.css sizes from them, and to
-// p-audio, whose popups p-audio.css docks by them. The .sheet-* classes say
-// which panel is open. Panels and the bar are fixed and slide in with a
-// transform, which offsetTop / offsetLeft leave out: they read where the
-// panel will be, not where its slide has got to.
-const PLATE_ROOM = ['sheet-picker', 'sheet-editor', 'sheet-editor-tall']
+// panel, or left of the panel and above the nav when it is a column,
+// sideways. The figures go to the wrapper, which cymatics-component.css sizes
+// from them, and to p-audio, whose popups p-audio.css docks by them. The
+// .sheet-* classes only say which panel is open. Panels and the bar are fixed
+// and slide in with a transform, which offsetTop / offsetLeft leave out: they
+// read where the panel will be, not where its slide has got to.
+const PLATE_ROOM = ['sheet-picker', 'sheet-editor']
 const PLATE_VARS = ['--plate-top', '--plate-bottom', '--plate-width']
 let plateTimer
 let plateKey = 'null'
@@ -85,11 +85,8 @@ function fitPlate(phase) {
   const wrapper = s('.cymatics-wrapper')
   const phone = phoneQuery().matches
   const editor = phone && phase === 'editor'
-  for (const [name, on] of Object.entries({
-    'sheet-picker': phone && phase === 'picker',
-    'sheet-editor': editor,
-    'sheet-editor-tall': editor && s('cymatics-controls').tall,
-  })) wrapper.classList.toggle(name, on)
+  wrapper.classList.toggle('sheet-picker', phone && phase === 'picker')
+  wrapper.classList.toggle('sheet-editor', editor)
 
   const panel = !phone ? null
     : phase === 'picker' ? s('cymatics-presets .presets.sheet')
@@ -120,9 +117,12 @@ function measurePlate(panel, bar) {
   const width = column ? panel.offsetLeft : innerWidth
   // The bar spans the screen upright; sideways it sits over the column only.
   const top = bar && bar.offsetLeft < width ? bar.offsetTop + bar.offsetHeight : 0
+  // Upright the panel sits on the nav; sideways the nav, centred on the
+  // screen, would cover the plate's corner, so the plate stops above it.
+  const nav = s('p-nav')
   return {
     '--plate-top': top,
-    '--plate-bottom': column ? innerHeight : panel.offsetTop,
+    '--plate-bottom': !column ? panel.offsetTop : nav ? nav.offsetTop : innerHeight,
     '--plate-width': width,
   }
 }

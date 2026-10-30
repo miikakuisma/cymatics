@@ -100,10 +100,10 @@ p-cymatics img#frame {
 
 /* ── Phone: room for the plate ─────────────────────────────────────────────
    While the picker or the editor is open, mount.js (fitPlate) marks the
-   wrapper .sheet-picker or .sheet-editor (plus .sheet-editor-tall while the
-   editor's tool takes its tall area) and measures the space the panel leaves:
+   wrapper .sheet-picker or .sheet-editor and measures the space the panel
+   leaves, again whenever the panel changes size (a ResizeObserver):
    --plate-top (the bottom of Cancel / Done in the editor, else 0),
-   --plate-bottom (the panel's top, or the screen's bottom beside a column)
+   --plate-bottom (the panel's top, or the nav's top beside a column)
    and --plate-width (the screen, or what is left of the column). The plate
    is the largest square in that space, centred. The query is PHONE_QUERY
    (src/studio/layout.js), copied verbatim. */
